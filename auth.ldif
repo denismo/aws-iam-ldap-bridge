@@ -1,0 +1,25 @@
+version: 1
+
+dn: ads-authenticatorid=awsiamauthenticator,ou=authenticators,ads-intercepto
+ rId=authenticationInterceptor,ou=interceptors,ads-directoryServiceId=defaul
+ t,ou=config
+objectclass: ads-authenticatorImpl
+objectclass: ads-base
+objectclass: ads-authenticator
+objectclass: top
+ads-authenticatorclass: com.denismo.apacheds.auth.AWSIAMAuthenticator
+ads-authenticatorid: awsiamauthenticator
+ads-enabled: TRUE
+
+dn: cn=config,ads-authenticatorid=awsiamauthenticator,ou=authenticators,ads-
+ interceptorId=authenticationInterceptor,ou=interceptors,ads-directoryServic
+ eId=default,ou=config
+objectclass: iamauthenticatorconfig
+objectclass: top
+accesskey: <access key - user must have Browser IAM and DynamoDB permissions>
+cn: config
+rootdn: dc=example,dc=com
+pollPeriod: 600
+secretkey: <secret access key>
+
+
