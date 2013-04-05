@@ -1,0 +1,20 @@
+version: 1
+dn: m-oid=2.5.6.16,ou=objectClasses,cn=core,ou=schema
+m-supobjectclass: top
+m-must: authorityRevocationList
+m-must: certificateRevocationList
+m-must: cACertificate
+m-may: crossCertificatePair
+m-typeobjectclass: AUXILIARY
+m-oid: 2.5.6.16
+m-name: certificationAuthority
+m-description: RFC2256: a certificate authority
+m-obsolete: FALSE
+entryParentId: c8872491-4720-4b4e-acd7-8b84ead14f7d
+createTimestamp: 20130404105709.699Z
+objectclass: metaObjectClass
+objectclass: metaTop
+objectclass: top
+entryUUID: ad70f839-5e9e-4cd1-9e45-d52161e91136
+creatorsname: uid=admin,ou=system
+entryCSN: 20130404105659.681000Z#000000#000#000000

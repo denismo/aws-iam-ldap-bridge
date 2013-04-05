@@ -1,0 +1,13 @@
+version: 1
+dn: m-oid=1.3.6.1.4.1.1466.109.114.3,ou=normalizers,cn=system,ou=schema
+objectclass: metaNormalizer
+objectclass: metaTop
+objectclass: top
+m-fqcn: org.apache.directory.api.ldap.model.schema.normalizers.CachingDeepTrimTo
+ LowerNormalizer
+m-oid: 1.3.6.1.4.1.1466.109.114.3
+entryParentId: 6a66e12f-7752-4734-bb24-9daf7f7b3658
+entryUUID: 769c71d8-59d2-4ebf-83a6-7c871cb34e16
+creatorsname: uid=admin,ou=system
+createTimestamp: 20130404105710.248Z
+entryCSN: 20130404105700.048000Z#000002#000#000000

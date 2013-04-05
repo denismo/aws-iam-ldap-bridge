@@ -3,6 +3,8 @@ package com.denismo.aws.iam;
 import com.amazonaws.auth.AWSCredentials;
 import com.amazonaws.services.dynamodb.AmazonDynamoDBClient;
 import com.amazonaws.services.dynamodb.model.*;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.Collections;
 import java.util.HashMap;
@@ -14,6 +16,7 @@ import java.util.Map;
  * Time: 9:15 PM
  */
 public class UIDAllocator {
+    private static final Logger LOG = LoggerFactory.getLogger(UIDAllocator.class);
     private AWSCredentials credentials;
     private String table;
 
@@ -29,7 +32,7 @@ public class UIDAllocator {
         getItem = client.getItem(new GetItemRequest().withTableName(table).withKey(new Key(new AttributeValue().withS(name))).withAttributesToGet("uidNumber"));
         if (getItem.getItem() == null) {
             String counter = getNextID(client);
-            System.out.println("Name " + name + " assigned ID " + counter);
+            LOG.info("Name " + name + " assigned ID " + counter);
             Map<String, AttributeValue> item = new HashMap<String, AttributeValue>();
             item.put("Name", new AttributeValue().withS(name));
             item.put("uidNumber", new AttributeValue().withN(counter));
@@ -39,12 +42,12 @@ public class UIDAllocator {
             } catch (ConditionalCheckFailedException ccf) {
                 counter = client.getItem(new GetItemRequest().withTableName(table).withKey(new Key(new AttributeValue().withS(name))).withAttributesToGet("uidNumber"))
                         .getItem().get("uidNumber").getN();
-                System.out.println("Name " + name + " has ID " + counter);
+                LOG.info("Name " + name + " has ID " + counter);
                 return counter;
             }
         } else {
             String counter = getItem.getItem().get("uidNumber").getN();
-            System.out.println("Name " + name + " has ID " + counter);
+            LOG.info("Name " + name + " has ID " + counter);
             return counter;
         }
     }

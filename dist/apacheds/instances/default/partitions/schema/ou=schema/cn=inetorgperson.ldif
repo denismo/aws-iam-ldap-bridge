@@ -1,0 +1,13 @@
+version: 1
+dn: cn=inetorgperson,ou=schema
+m-dependencies: system
+m-dependencies: core
+m-dependencies: cosine
+objectclass: metaSchema
+objectclass: top
+cn: inetorgperson
+entryParentId: 55f4ef38-f7c8-4bab-a8d8-3b0955b43ba5
+entryUUID: 656aa342-9e28-4895-9d4e-211dc830b5bc
+creatorsname: uid=admin,ou=system
+createTimestamp: 20130404105710.353Z
+entryCSN: 20130404105659.189000Z#000000#000#000000

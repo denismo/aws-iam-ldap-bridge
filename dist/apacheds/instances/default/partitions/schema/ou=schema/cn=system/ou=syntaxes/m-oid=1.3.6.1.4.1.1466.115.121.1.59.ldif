@@ -1,0 +1,14 @@
+version: 1
+dn: m-oid=1.3.6.1.4.1.1466.115.121.1.59,ou=syntaxes,cn=system,ou=schema
+objectclass: top
+objectclass: metaTop
+objectclass: metaSyntax
+m-oid: 1.3.6.1.4.1.1466.115.121.1.59
+m-description: Trigger Specification
+x-not-human-readable: FALSE
+m-obsolete: FALSE
+entryParentId: d9909fd8-fccc-4e79-a758-4122ba4b362d
+entryUUID: ee82fac1-2d4d-4e50-9828-ab6011f7a354
+creatorsname: uid=admin,ou=system
+createtimestamp: 20100111145217Z
+entrycsn: 20100111202214.878000Z#000000#000#000000

@@ -1,0 +1,21 @@
+version: 1
+dn: m-oid=1.3.6.1.4.1.42.2.27.4.2.4,ou=objectClasses,cn=java,ou=schema
+m-supobjectclass: top
+m-must: javaClassName
+m-may: javaClassNames
+m-may: javaCodebase
+m-may: javaDoc
+m-may: description
+m-typeobjectclass: ABSTRACT
+m-oid: 1.3.6.1.4.1.42.2.27.4.2.4
+m-name: javaObject
+m-description: Java object representation
+m-obsolete: FALSE
+entryParentId: fd52840f-b976-43e2-9089-552136bbe663
+createTimestamp: 20130404105710.206Z
+objectclass: metaObjectClass
+objectclass: metaTop
+objectclass: top
+entryUUID: c2c35e9f-e4d6-477b-aad3-5130ba860b9f
+creatorsname: uid=admin,ou=system
+entryCSN: 20130404105659.809000Z#000001#000#000000

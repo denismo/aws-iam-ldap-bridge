@@ -6,6 +6,8 @@ import com.amazonaws.auth.BasicAWSCredentials;
 import com.amazonaws.services.identitymanagement.AmazonIdentityManagementClient;
 import org.apache.directory.api.ldap.model.entry.Entry;
 import org.apache.directory.api.ldap.model.exception.LdapInvalidAttributeValueException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * User: Denis Mikhalkin
@@ -13,10 +15,11 @@ import org.apache.directory.api.ldap.model.exception.LdapInvalidAttributeValueEx
  * Time: 10:40 PM
  */
 public class IAMPasswordValidator {
+    private static final Logger LOG = LoggerFactory.getLogger(IAMPasswordValidator.class);
     public boolean verifyIAMPassword(Entry user, String pw) throws LdapInvalidAttributeValueException {
         String accessKey = user.get("accessKey").getString();
-        System.err.printf("Verifying user %s with accessKey %s and secretKey %s",
-                user.get("uid").getString(), accessKey, pw);
+        LOG.debug("Verifying user {0} with accessKey <hidden> and secretKey <hidden>",
+                user.get("uid").getString());
         AWSCredentials creds = new BasicAWSCredentials(accessKey, pw);
         AmazonIdentityManagementClient client = new AmazonIdentityManagementClient(creds);
         try {

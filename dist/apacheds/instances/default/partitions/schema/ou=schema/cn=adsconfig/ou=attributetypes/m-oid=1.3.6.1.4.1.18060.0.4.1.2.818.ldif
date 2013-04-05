@@ -1,0 +1,19 @@
+version: 1
+dn: m-oid=1.3.6.1.4.1.18060.0.4.1.2.818,ou=attributeTypes,cn=adsconfig,ou=schema
+m-usage: directoryOperation
+m-length: 0
+m-oid: 1.3.6.1.4.1.18060.0.4.1.2.818
+m-name: ads-replLastSentCsn
+m-description: the CSN that was sent to the client as part of cookie
+m-equality: csnMatch
+entryParentId: f893cea1-b4d6-45ac-bf5c-f4055c3743aa
+m-ordering: csnOrderingMatch
+m-singlevalue: TRUE
+createTimestamp: 20130404105710.180Z
+m-syntax: 1.3.6.1.4.1.4203.666.11.2.1
+objectclass: metaAttributeType
+objectclass: metaTop
+objectclass: top
+entryUUID: 9c2f22b9-2840-45c1-8235-acb78501d72c
+creatorsname: uid=admin,ou=system
+entryCSN: 20130404105659.299000Z#000000#000#000000

@@ -1,0 +1,21 @@
+version: 1
+dn: m-oid=2.5.4.33,ou=attributeTypes,cn=core,ou=schema
+m-usage: USER_APPLICATIONS
+m-oid: 2.5.4.33
+m-name: roleOccupant
+m-description: RFC2256: occupant of role
+m-obsolete: FALSE
+m-equality: distinguishedNameMatch
+m-supattributetype: distinguishedName
+entryParentId: cda9053d-6ad3-4a9b-aa88-fda058ab29f8
+m-singlevalue: FALSE
+createTimestamp: 20130404105710.070Z
+m-syntax: 1.3.6.1.4.1.1466.115.121.1.12
+m-nousermodification: FALSE
+m-collective: FALSE
+objectclass: metaAttributeType
+objectclass: metaTop
+objectclass: top
+entryUUID: aa75ab5f-5fed-47e8-ae67-e404cce3bcd4
+creatorsname: uid=admin,ou=system
+entryCSN: 20130404105659.657000Z#000000#000#000000

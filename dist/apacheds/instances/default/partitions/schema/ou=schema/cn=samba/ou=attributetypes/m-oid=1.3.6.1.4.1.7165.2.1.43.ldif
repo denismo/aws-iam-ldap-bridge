@@ -1,0 +1,20 @@
+version: 1
+dn: m-oid=1.3.6.1.4.1.7165.2.1.43,ou=attributeTypes,cn=samba,ou=schema
+m-usage: USER_APPLICATIONS
+m-oid: 1.3.6.1.4.1.7165.2.1.43
+m-name: sambaBoolOption
+m-description: A boolean option
+m-obsolete: FALSE
+m-equality: booleanMatch
+entryParentId: 5b839064-cb16-4391-85a8-cb8462742864
+m-singlevalue: TRUE
+createTimestamp: 20130404105709.943Z
+m-syntax: 1.3.6.1.4.1.1466.115.121.1.7
+m-nousermodification: FALSE
+m-collective: FALSE
+objectclass: top
+objectclass: metaTop
+objectclass: metaAttributeType
+entryUUID: 0be84270-9ce4-46e3-8730-1a8ac3e7a650
+creatorsname: uid=admin,ou=system
+entryCSN: 20130404105659.948000Z#000001#000#000000

@@ -1,0 +1,14 @@
+version: 1
+dn: m-oid=1.3.6.1.4.1.1466.115.121.1.40,ou=syntaxes,cn=system,ou=schema
+objectclass: top
+objectclass: metaTop
+objectclass: metaSyntax
+m-oid: 1.3.6.1.4.1.1466.115.121.1.40
+m-description: Octet String
+x-not-human-readable: TRUE
+m-obsolete: FALSE
+entryParentId: d9909fd8-fccc-4e79-a758-4122ba4b362d
+entryUUID: 9820a9e5-d8d1-451e-814a-e7dd6b3c2e74
+creatorsname: uid=admin,ou=system
+createtimestamp: 20100111145217Z
+entrycsn: 20100111202214.878000Z#000000#000#000000

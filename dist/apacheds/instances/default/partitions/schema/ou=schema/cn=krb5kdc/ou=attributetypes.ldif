@@ -1,0 +1,10 @@
+version: 1
+dn: ou=attributeTypes,cn=krb5kdc,ou=schema
+objectclass: organizationalUnit
+objectclass: top
+entryParentId: a6b94951-d275-4bf1-af42-e3502821f6f9
+ou: attributetypes
+entryUUID: 4536527c-5dc3-460d-be1c-c6ed14f46896
+creatorsname: uid=admin,ou=system
+createTimestamp: 20130404105709.693Z
+entryCSN: 20130404105659.812000Z#000000#000#000000

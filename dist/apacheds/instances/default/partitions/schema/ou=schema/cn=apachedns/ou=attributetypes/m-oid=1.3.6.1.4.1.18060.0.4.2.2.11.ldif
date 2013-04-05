@@ -1,0 +1,21 @@
+version: 1
+dn: m-oid=1.3.6.1.4.1.18060.0.4.2.2.11,ou=attributeTypes,cn=apachedns,ou=schema
+m-usage: USER_APPLICATIONS
+m-oid: 1.3.6.1.4.1.18060.0.4.2.2.11
+m-name: apacheDnsSoaExpire
+m-description: A 32 bit time value that specifies the upper limit on the time in
+ terval that can elapse before the zone is no longer authoritative
+m-obsolete: FALSE
+m-equality: integerMatch
+entryParentId: 8b8b3ce0-dbc7-476f-b6b6-854c458243fe
+m-singlevalue: TRUE
+createTimestamp: 20130404105710.337Z
+m-syntax: 1.3.6.1.4.1.1466.115.121.1.27
+m-nousermodification: FALSE
+m-collective: FALSE
+objectclass: metaAttributeType
+objectclass: metaTop
+objectclass: top
+entryUUID: f3fced59-7060-4743-bd32-74bb5e5f3b33
+creatorsname: uid=admin,ou=system
+entryCSN: 20130404105659.491000Z#000000#000#000000

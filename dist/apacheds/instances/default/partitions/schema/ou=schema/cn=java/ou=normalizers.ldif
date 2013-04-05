@@ -1,0 +1,10 @@
+version: 1
+dn: ou=normalizers,cn=java,ou=schema
+objectclass: organizationalUnit
+objectclass: top
+entryParentId: e85ba8cc-b374-43a3-907b-0159a5aa4b83
+ou: normalizers
+entryUUID: cd0f165c-5383-47c3-a55d-dab469399124
+creatorsname: uid=admin,ou=system
+createTimestamp: 20130404105709.956Z
+entryCSN: 20130404105659.801000Z#000002#000#000000

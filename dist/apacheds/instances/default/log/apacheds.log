@@ -1,0 +1,49 @@
+[21:57:00] WARN [net.sf.ehcache.Cache] - Cache: system has a maxElementsInMemory of 0.  In Ehcache 2.0 this has been changed to mean a store with no capacity limit. Set it to 1 if you want no elements cached in memory
+[21:57:00] WARN [net.sf.ehcache.Cache] - Cache: example has a maxElementsInMemory of 0.  In Ehcache 2.0 this has been changed to mean a store with no capacity limit. Set it to 1 if you want no elements cached in memory
+[21:57:09] WARN [org.apache.directory.server.core.DefaultDirectoryService] - You didn't change the admin password of directory service instance 'default'.  Please update the admin password as soon as possible to prevent a possible security breach.
+[21:57:24] WARN [org.apache.directory.server.core.normalization.NormalizationInterceptor] - The Rdn 'm-oid=0.9.2342.19200300.101.1.6' is not present in the entry
+[21:57:24] WARN [org.apache.directory.server.core.normalization.NormalizationInterceptor] - The Rdn 'm-oid=0.9.2342.19200300.101.1.7' is not present in the entry
+[21:58:18] ERROR [org.apache.directory.server.UberjarMain] - Failed to start the service.
+org.apache.directory.api.ldap.model.exception.LdapOtherException: ERR_250_ENTRY_ALREADY_EXISTS ou=system already exists!
+	at org.apache.directory.server.core.api.partition.AbstractPartition.initialize(AbstractPartition.java:84)
+	at org.apache.directory.server.core.DefaultDirectoryService.initialize(DefaultDirectoryService.java:1796)
+	at org.apache.directory.server.core.DefaultDirectoryService.startup(DefaultDirectoryService.java:1227)
+	at org.apache.directory.server.ApacheDsService.initDirectoryService(ApacheDsService.java:315)
+	at org.apache.directory.server.ApacheDsService.start(ApacheDsService.java:179)
+	at org.apache.directory.server.UberjarMain.start(UberjarMain.java:76)
+	at org.apache.directory.server.UberjarMain.main(UberjarMain.java:54)
+Caused by: org.apache.directory.api.ldap.model.exception.LdapOtherException: ERR_250_ENTRY_ALREADY_EXISTS ou=system already exists!
+	at org.apache.directory.server.core.api.partition.AbstractPartition.initialize(AbstractPartition.java:84)
+	at org.apache.directory.server.core.shared.partition.DefaultPartitionNexus.addContextPartition(DefaultPartitionNexus.java:824)
+	at org.apache.directory.server.core.shared.partition.DefaultPartitionNexus.doInit(DefaultPartitionNexus.java:218)
+	at org.apache.directory.server.core.api.partition.AbstractPartition.initialize(AbstractPartition.java:79)
+	... 6 more
+Caused by: org.apache.directory.api.ldap.model.exception.LdapEntryAlreadyExistsException: ERR_250_ENTRY_ALREADY_EXISTS ou=system already exists!
+	at org.apache.directory.server.core.partition.impl.btree.AbstractBTreePartition.add(AbstractBTreePartition.java:612)
+	at org.apache.directory.server.core.partition.impl.btree.jdbm.JdbmPartition.doInit(JdbmPartition.java:262)
+	at org.apache.directory.server.core.api.partition.AbstractPartition.initialize(AbstractPartition.java:79)
+	... 9 more
+[21:58:25] WARN [net.sf.ehcache.Cache] - Cache: system has a maxElementsInMemory of 0.  In Ehcache 2.0 this has been changed to mean a store with no capacity limit. Set it to 1 if you want no elements cached in memory
+[21:58:25] WARN [net.sf.ehcache.Cache] - Cache: example has a maxElementsInMemory of 0.  In Ehcache 2.0 this has been changed to mean a store with no capacity limit. Set it to 1 if you want no elements cached in memory
+[21:58:29] WARN [org.apache.directory.server.core.DefaultDirectoryService] - You didn't change the admin password of directory service instance 'default'.  Please update the admin password as soon as possible to prevent a possible security breach.
+[21:58:41] ERROR [com.denismo.aws.iam.LDAPIAMPoller] - Exception polling
+Status Code: 400, AWS Service: AmazonIdentityManagement, AWS Request ID: 9a4aa2d3-9d16-11e2-b2db-2f18d5db5f10, AWS Error Code: IncompleteSignature, AWS Error Message: 'access' not a valid key=value pair (missing equal-sign) in Authorization header: 'AWS4-HMAC-SHA256 Credential=<AWS access key>/20130404/us-east-1/iam/aws4_request, SignedHeaders=host;user-agent;x-amz-date, Signature=1c79a752120f37d84c887ddc605ac0b7107d5d79f10f0ec19b464c38030d8bbf'.
+	at com.amazonaws.http.AmazonHttpClient.handleErrorResponse(AmazonHttpClient.java:556)
+	at com.amazonaws.http.AmazonHttpClient.executeHelper(AmazonHttpClient.java:289)
+	at com.amazonaws.http.AmazonHttpClient.execute(AmazonHttpClient.java:170)
+	at com.amazonaws.services.identitymanagement.AmazonIdentityManagementClient.invoke(AmazonIdentityManagementClient.java:2441)
+	at com.amazonaws.services.identitymanagement.AmazonIdentityManagementClient.listGroups(AmazonIdentityManagementClient.java:245)
+	at com.amazonaws.services.identitymanagement.AmazonIdentityManagementClient.listGroups(AmazonIdentityManagementClient.java:1997)
+	at com.denismo.aws.iam.LDAPIAMPoller.populateGroupsFromIAM(LDAPIAMPoller.java:123)
+	at com.denismo.aws.iam.LDAPIAMPoller.pollIAM(LDAPIAMPoller.java:112)
+	at com.denismo.aws.iam.LDAPIAMPoller.access$000(LDAPIAMPoller.java:30)
+	at com.denismo.aws.iam.LDAPIAMPoller$1.run(LDAPIAMPoller.java:297)
+	at java.util.concurrent.Executors$RunnableAdapter.call(Executors.java:441)
+	at java.util.concurrent.FutureTask$Sync.innerRunAndReset(FutureTask.java:317)
+	at java.util.concurrent.FutureTask.runAndReset(FutureTask.java:150)
+	at java.util.concurrent.ScheduledThreadPoolExecutor$ScheduledFutureTask.access$101(ScheduledThreadPoolExecutor.java:98)
+	at java.util.concurrent.ScheduledThreadPoolExecutor$ScheduledFutureTask.runPeriodic(ScheduledThreadPoolExecutor.java:180)
+	at java.util.concurrent.ScheduledThreadPoolExecutor$ScheduledFutureTask.run(ScheduledThreadPoolExecutor.java:204)
+	at java.util.concurrent.ThreadPoolExecutor$Worker.runTask(ThreadPoolExecutor.java:886)
+	at java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:908)
+	at java.lang.Thread.run(Thread.java:662)

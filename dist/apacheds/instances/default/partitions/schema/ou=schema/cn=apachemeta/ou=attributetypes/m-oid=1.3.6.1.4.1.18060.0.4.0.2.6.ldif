@@ -1,0 +1,20 @@
+version: 1
+dn: m-oid=1.3.6.1.4.1.18060.0.4.0.2.6,ou=attributeTypes,cn=apachemeta,ou=schema
+m-usage: USER_APPLICATIONS
+m-oid: 1.3.6.1.4.1.18060.0.4.0.2.6
+m-name: m-must
+m-description: The list of mandatory ATs
+m-obsolete: FALSE
+m-equality: nameOrNumericIdMatch
+entryParentId: c96a66c0-9178-40ac-93b2-fe293a8f4fd9
+m-singlevalue: FALSE
+createTimestamp: 20130404105710.283Z
+m-syntax: 1.3.6.1.4.1.1466.115.121.1.38
+m-nousermodification: FALSE
+m-collective: FALSE
+objectclass: top
+objectclass: metaTop
+objectclass: metaAttributeType
+entryUUID: e54f56b6-406a-4a6d-b9be-0ea0c07203be
+creatorsname: uid=admin,ou=system
+entryCSN: 20130404105659.551000Z#000000#000#000000

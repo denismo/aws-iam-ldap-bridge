@@ -75,7 +75,7 @@ public class LDAPIAMPoller {
             ensureRootDN();
 
             if (config.get("pollPeriod") != null) {
-                pollPeriod = (Integer)config.get("pollPeriod").get().getValue();
+                pollPeriod = Integer.parseInt(config.get("pollPeriod").getString());
             }
         } catch (Throwable e) {
             LOG.error("Exception reading config for LDAPIAMPoller", e);
@@ -83,10 +83,8 @@ public class LDAPIAMPoller {
     }
 
     private void ensureRootDN() throws LdapException {
-        if (!directory.getPartitionNexus().hasEntry(new HasEntryOperationContext(directory.getAdminSession(),
-                directory.getDnFactory().create(rootDN)))) {
-            createEntry(rootDN, "domain");
-        }
+        directory.getPartitionNexus().hasEntry(new HasEntryOperationContext(directory.getAdminSession(),
+                directory.getDnFactory().create(rootDN)));
         if (!directory.getPartitionNexus().hasEntry(new HasEntryOperationContext(directory.getAdminSession(),
                 directory.getDnFactory().create(usersDN)))) {
             createEntry(usersDN, "organizationalUnit");

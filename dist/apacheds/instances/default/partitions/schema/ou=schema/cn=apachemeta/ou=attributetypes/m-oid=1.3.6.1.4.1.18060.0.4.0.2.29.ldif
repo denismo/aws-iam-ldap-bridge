@@ -1,0 +1,20 @@
+version: 1
+dn: m-oid=1.3.6.1.4.1.18060.0.4.0.2.29,ou=attributeTypes,cn=apachemeta,ou=schema
+m-usage: USER_APPLICATIONS
+m-oid: 1.3.6.1.4.1.18060.0.4.0.2.29
+m-name: m-applies
+m-description: List of attribute types the matching rule applies to
+m-obsolete: FALSE
+m-equality: numericOidMatch
+entryParentId: c96a66c0-9178-40ac-93b2-fe293a8f4fd9
+m-singlevalue: FALSE
+createTimestamp: 20130404105710.112Z
+m-syntax: 1.3.6.1.4.1.1466.115.121.1.38
+m-nousermodification: FALSE
+m-collective: FALSE
+objectclass: top
+objectclass: metaTop
+objectclass: metaAttributeType
+entryUUID: d3e79ffb-c00f-4e6d-a369-080b59be3881
+creatorsname: uid=admin,ou=system
+entryCSN: 20130404105659.541000Z#000000#000#000000

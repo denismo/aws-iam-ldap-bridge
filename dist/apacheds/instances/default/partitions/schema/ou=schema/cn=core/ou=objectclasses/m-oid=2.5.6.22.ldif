@@ -1,0 +1,20 @@
+version: 1
+dn: m-oid=2.5.6.22,ou=objectClasses,cn=core,ou=schema
+m-supobjectclass: top
+m-may: authorityRevocationList
+m-may: certificateRevocationList
+m-may: cACertificate
+m-may: crossCertificatePair
+m-typeobjectclass: AUXILIARY
+m-oid: 2.5.6.22
+m-name: pkiCA
+m-description: RFC2587: PKI certificate authority
+m-obsolete: FALSE
+entryParentId: c8872491-4720-4b4e-acd7-8b84ead14f7d
+createTimestamp: 20130404105710.259Z
+objectclass: metaObjectClass
+objectclass: metaTop
+objectclass: top
+entryUUID: 785d30ad-7007-4644-b0a6-9b4f067195bc
+creatorsname: uid=admin,ou=system
+entryCSN: 20130404105659.685000Z#000001#000#000000

@@ -1,0 +1,20 @@
+version: 1
+dn: m-oid=1.3.6.1.4.1.18060.0.4.1.2.5,ou=attributeTypes,cn=apache,ou=schema
+m-usage: DSA_OPERATION
+m-oid: 1.3.6.1.4.1.18060.0.4.1.2.5
+m-name: apacheOneAlias
+m-description: Index attribute used to track single level aliases
+m-obsolete: FALSE
+m-equality: uuidMatch
+entryParentId: 3e469734-8a01-430a-a99f-f7172cf91d7e
+m-singlevalue: FALSE
+createTimestamp: 20130404105709.891Z
+m-syntax: 1.3.6.1.1.16.1
+m-nousermodification: TRUE
+m-collective: FALSE
+objectclass: metaAttributeType
+objectclass: metaTop
+objectclass: top
+entryUUID: 7c572e51-1ebb-4906-958d-145b9407fe27
+creatorsname: uid=admin,ou=system
+entryCSN: 20130404105659.425000Z#000001#000#000000

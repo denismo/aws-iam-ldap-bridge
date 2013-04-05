@@ -1,0 +1,16 @@
+version: 1
+dn: m-oid=1.3.6.1.4.1.18060.0.4.1.2.909,ou=attributeTypes,cn=adsconfig,ou=schema
+m-length: 0
+m-oid: 1.3.6.1.4.1.18060.0.4.1.2.909
+m-name: ads-pwdGraceExpire
+m-equality: integerMatch
+entryParentId: f893cea1-b4d6-45ac-bf5c-f4055c3743aa
+createTimestamp: 20130404105710.310Z
+m-singlevalue: TRUE
+m-syntax: 1.3.6.1.4.1.1466.115.121.1.27
+objectclass: top
+objectclass: metaTop
+objectclass: metaAttributeType
+entryUUID: 469f17bc-e4a9-479c-978c-e4267b842cd9
+creatorsname: uid=admin,ou=system
+entryCSN: 20130404105659.324000Z#000000#000#000000

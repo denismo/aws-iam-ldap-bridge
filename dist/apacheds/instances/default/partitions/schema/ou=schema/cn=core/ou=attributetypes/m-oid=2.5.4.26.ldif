@@ -1,0 +1,22 @@
+version: 1
+dn: m-oid=2.5.4.26,ou=attributeTypes,cn=core,ou=schema
+m-usage: USER_APPLICATIONS
+m-oid: 2.5.4.26
+m-name: registeredAddress
+m-description: RFC2256: registered postal address
+m-obsolete: FALSE
+m-equality: caseIgnoreListMatch
+m-supattributetype: postalAddress
+entryParentId: cda9053d-6ad3-4a9b-aa88-fda058ab29f8
+m-substr: caseIgnoreListSubstringsMatch
+m-singlevalue: FALSE
+createTimestamp: 20130404105710.083Z
+m-syntax: 1.3.6.1.4.1.1466.115.121.1.41
+m-nousermodification: FALSE
+m-collective: FALSE
+objectclass: metaAttributeType
+objectclass: metaTop
+objectclass: top
+entryUUID: 779e0c07-7763-4f42-b1b0-9f91d0d57342
+creatorsname: uid=admin,ou=system
+entryCSN: 20130404105659.652000Z#000001#000#000000

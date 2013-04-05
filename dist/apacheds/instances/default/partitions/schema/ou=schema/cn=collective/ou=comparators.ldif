@@ -1,0 +1,10 @@
+version: 1
+dn: ou=comparators,cn=collective,ou=schema
+objectclass: organizationalUnit
+objectclass: top
+entryParentId: 8f4b157e-0816-4f26-835a-b86101c61966
+ou: comparators
+entryUUID: 29cf6af3-b9e8-43e7-b2f4-c41f77b3f920
+creatorsname: uid=admin,ou=system
+createTimestamp: 20130404105710.157Z
+entryCSN: 20130404105659.603000Z#000001#000#000000

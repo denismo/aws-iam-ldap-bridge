@@ -1,0 +1,19 @@
+version: 1
+dn: m-oid=1.3.6.1.4.1.1466.101.120.6,ou=attributeTypes,cn=system,ou=schema
+m-usage: DSA_OPERATION
+m-oid: 1.3.6.1.4.1.1466.101.120.6
+m-name: altServer
+m-description: RFC2252: alternative servers
+m-obsolete: FALSE
+entryParentId: 10960074-91eb-4dc3-ac99-85af1427dc62
+m-singlevalue: FALSE
+createTimestamp: 20130404105710.375Z
+m-syntax: 1.3.6.1.4.1.1466.115.121.1.26
+m-nousermodification: FALSE
+m-collective: FALSE
+objectclass: metaAttributeType
+objectclass: metaTop
+objectclass: top
+entryUUID: 52fc12b1-a05d-4528-b26a-22f9fe2dd276
+creatorsname: uid=admin,ou=system
+entryCSN: 20130404105659.993000Z#000000#000#000000

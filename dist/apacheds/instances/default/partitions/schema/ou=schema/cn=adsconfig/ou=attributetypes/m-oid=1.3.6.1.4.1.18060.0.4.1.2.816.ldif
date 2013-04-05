@@ -1,0 +1,19 @@
+version: 1
+dn: m-oid=1.3.6.1.4.1.18060.0.4.1.2.816,ou=attributeTypes,cn=adsconfig,ou=schema
+m-length: 0
+m-oid: 1.3.6.1.4.1.18060.0.4.1.2.816
+m-name: ads-httpConfFile
+m-description: Jetty web server config file path
+m-equality: caseIgnoreMatch
+entryParentId: f893cea1-b4d6-45ac-bf5c-f4055c3743aa
+m-substr: caseIgnoreSubstringsMatch
+m-ordering: caseIgnoreOrderingMatch
+m-singlevalue: TRUE
+createTimestamp: 20130404105710.188Z
+m-syntax: 1.3.6.1.4.1.1466.115.121.1.44
+objectclass: metaTop
+objectclass: metaAttributeType
+objectclass: top
+entryUUID: d5184c85-4447-47a4-8ff6-43294ae5bac4
+creatorsname: uid=admin,ou=system
+entryCSN: 20130404105659.297000Z#000000#000#000000

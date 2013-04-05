@@ -1,0 +1,21 @@
+version: 1
+dn: m-oid=2.5.4.25,ou=attributeTypes,cn=core,ou=schema
+m-usage: USER_APPLICATIONS
+m-oid: 2.5.4.25
+m-name: internationaliSDNNumber
+m-description: RFC2256: international ISDN number
+m-obsolete: FALSE
+m-equality: numericStringMatch
+entryParentId: cda9053d-6ad3-4a9b-aa88-fda058ab29f8
+m-substr: numericStringSubstringsMatch
+m-singlevalue: FALSE
+createTimestamp: 20130404105710.247Z
+m-syntax: 1.3.6.1.4.1.1466.115.121.1.36
+m-nousermodification: FALSE
+m-collective: FALSE
+objectclass: metaAttributeType
+objectclass: metaTop
+objectclass: top
+entryUUID: 8c89855e-b835-4ea5-a600-e888931eed26
+creatorsname: uid=admin,ou=system
+entryCSN: 20130404105659.652000Z#000000#000#000000

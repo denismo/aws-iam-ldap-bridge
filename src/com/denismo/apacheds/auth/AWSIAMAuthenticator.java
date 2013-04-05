@@ -25,6 +25,8 @@ import java.net.SocketAddress;
  * Date: 30/03/13
  * Time: 10:31 PM
  */
+// TODO: Proper logging
+// TODO: ant based build file with Ivy dependencies
 public class AWSIAMAuthenticator extends AbstractAuthenticator {
     private static final Logger LOG = LoggerFactory.getLogger(AWSIAMAuthenticator.class);
 

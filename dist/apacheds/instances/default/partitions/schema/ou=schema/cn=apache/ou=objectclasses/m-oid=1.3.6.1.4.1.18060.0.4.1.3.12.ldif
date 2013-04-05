@@ -1,0 +1,17 @@
+version: 1
+dn: m-oid=1.3.6.1.4.1.18060.0.4.1.3.12,ou=objectClasses,cn=apache,ou=schema
+m-must: changeTime
+m-must: changeType
+m-must: rev
+m-must: committer
+objectclass: metaObjectClass
+objectclass: metaTop
+objectclass: top
+m-oid: 1.3.6.1.4.1.18060.0.4.1.3.12
+m-name: changeLogEvent
+m-description: represents change events
+entryParentId: c193e462-9d58-4d74-a54f-ae7fc4c329e4
+entryUUID: bb80129b-d74b-44eb-8276-bcaddef115c2
+creatorsname: uid=admin,ou=system
+createTimestamp: 20130404105710.050Z
+entryCSN: 20130404105659.463000Z#000000#000#000000

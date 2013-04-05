@@ -1,0 +1,16 @@
+version: 1
+dn: m-oid=1.3.6.1.4.1.18060.0.4.1.3.260,ou=objectClasses,cn=adsconfig,ou=schema
+m-supobjectclass: ads-server
+m-may: ads-searchBaseDN
+m-typeobjectclass: ABSTRACT
+m-oid: 1.3.6.1.4.1.18060.0.4.1.3.260
+m-name: ads-dsBasedServer
+m-description: The DirectoryService based server ObjectClass
+entryParentId: c41fc44d-ec8e-40e8-b72b-789b13bea5e0
+createTimestamp: 20130404105709.939Z
+objectclass: top
+objectclass: metaTop
+objectclass: metaObjectClass
+entryUUID: 66f21d46-c73f-4240-87ba-aaf6c9512fdd
+creatorsname: uid=admin,ou=system
+entryCSN: 20130404105659.363000Z#000000#000#000000

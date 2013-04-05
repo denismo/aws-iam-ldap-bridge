@@ -1,0 +1,21 @@
+version: 1
+dn: m-oid=1.3.6.1.4.1.18060.0.4.1.2.3,ou=attributeTypes,cn=apache,ou=schema
+m-usage: DSA_OPERATION
+m-oid: 1.3.6.1.4.1.18060.0.4.1.2.3
+m-name: apachePresence
+m-description: Index attribute used to track the existence of attributes
+m-obsolete: FALSE
+m-equality: caseIgnoreMatch
+entryParentId: 3e469734-8a01-430a-a99f-f7172cf91d7e
+m-substr: caseIgnoreSubstringsMatch
+m-singlevalue: FALSE
+createTimestamp: 20130404105710.428Z
+m-syntax: 1.3.6.1.4.1.1466.115.121.1.15
+m-nousermodification: TRUE
+m-collective: FALSE
+objectclass: metaAttributeType
+objectclass: metaTop
+objectclass: top
+entryUUID: 9808557c-9773-4d97-a23e-a1d2cbbec7ad
+creatorsname: uid=admin,ou=system
+entryCSN: 20130404105659.409000Z#000000#000#000000

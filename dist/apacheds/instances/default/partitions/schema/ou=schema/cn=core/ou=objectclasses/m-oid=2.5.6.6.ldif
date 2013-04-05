@@ -1,0 +1,22 @@
+version: 1
+dn: m-oid=2.5.6.6,ou=objectClasses,cn=core,ou=schema
+m-supobjectclass: top
+m-must: sn
+m-must: cn
+m-may: userPassword
+m-may: telephoneNumber
+m-may: seeAlso
+m-may: description
+m-typeobjectclass: STRUCTURAL
+m-oid: 2.5.6.6
+m-name: person
+m-description: RFC2256: a person
+m-obsolete: FALSE
+entryParentId: c8872491-4720-4b4e-acd7-8b84ead14f7d
+createTimestamp: 20130404105709.718Z
+objectclass: metaObjectClass
+objectclass: metaTop
+objectclass: top
+entryUUID: 4068c644-da8f-40d4-9b65-9365227050d5
+creatorsname: uid=admin,ou=system
+entryCSN: 20130404105659.688000Z#000001#000#000000

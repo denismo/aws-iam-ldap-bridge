@@ -1,0 +1,10 @@
+version: 1
+dn: ou=ditStructureRules,cn=apache,ou=schema
+objectclass: organizationalUnit
+objectclass: top
+entryParentId: ea1a8fa7-0d9f-4e6f-9d6b-8cf23822f041
+ou: ditstructurerules
+entryUUID: 1da2ba7f-77a6-4b8b-8988-f4a6a71fe334
+creatorsname: uid=admin,ou=system
+createTimestamp: 20130404105710.278Z
+entryCSN: 20130404105659.386000Z#000000#000#000000
