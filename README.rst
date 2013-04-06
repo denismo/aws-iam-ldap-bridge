@@ -13,8 +13,9 @@ After login, the user will have the Linux groups corresponding to the IAM groups
 
 Note: The user's AWS Secret Keys are never stored in any persistent storage or logs.
 
-For more information, please read the <a href="dist/apacheds/INSTALL">INSTALL</a> document inside of the installation package.
+For more information, please read the `INSTALL`_ document inside of the installation package.
 
 Note: There is a bug in ApacheDS 2.0.0-M11 which prevents custom authenticators from running. The installation package
 for this project provides a patched package of ApahacheDS 2.0.0-M11.
 
+.. INSTALL: https://bitbucket.org/denismo/iam4apacheds/src/6f544c8bd80886a0c02315dc980f23a2cf0761a7/dist/apacheds/INSTALL?at=master
