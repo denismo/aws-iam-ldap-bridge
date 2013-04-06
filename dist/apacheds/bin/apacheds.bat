@@ -16,6 +16,11 @@ REM  KIND, either express or implied.  See the License for the
 REM  specific language governing permissions and limitations
 REM  under the License.
 
+if not exist ..\instances\default (
+    cd ..\instances
+    unzip -q default.zip
+    cd ..\bin
+)
 
 REM Getting the instance name from the first argument
 set INSTANCE_NAME=%1

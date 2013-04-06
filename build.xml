@@ -2,6 +2,8 @@
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://ant.apache.org/ivy/schemas/ivy.xsd">
     <property name="ivy.lib.dir" location="${basedir}/ivylib"/>
     <property name="outdir" location="${basedir}/ivyout" />
+    <property name="distdir" location="${basedir}/dist/apacheds" />
+    <property name="targetdir" location="${basedir}/target/apacheds" />
     <path id="ivy.lib.path">
         <fileset dir="E:\WS\Lib\apache-ivy-2.3.0" includes="*.jar"/>
     </path>
@@ -26,4 +28,25 @@
             <fileset dir="${outdir}" includes="**/*.class"  />
         </jar>
     </target>
+
+    <target name="dist" depends="package">
+        <deltree dir="${targetdir}" />
+        <mkdir dir="${targetdir}" />
+
+        <copy todir="${targetdir}">
+            <fileset dir="${distdir}" />
+        </copy>
+
+        <copy file="${distdir}/iam.ldif" todir="${targetdir}" />
+        <copy file="${distdir}/modify.ldif" todir="${targetdir}" />
+        <copy file="${distdir}/enable_nis.ldif" todir="${targetdir}" />
+        <copy file="${distdir}/auth.ldif" todir="${targetdir}" />
+
+        <copy todir="${targetdir}/lib">
+            <fileset dir="${ivy.lib.dir}" includes="**/*.jar" />
+        </copy>
+
+        <copy todir="${targetdir}/lib" file="${basedir}/apacheds_awsiam.jar" />
+    </target>
+
 </project>

@@ -34,6 +34,13 @@ else
     exit 1
 fi
 
+if ! test -d ../instances/default
+then
+    cd ../instances
+    unzip -q default.zip
+    cd ../bin
+fi
+
 # Printing instance information
 echo "Starting ApacheDS instance '$ADS_INSTANCE_NAME'..."
 

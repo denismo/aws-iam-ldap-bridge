@@ -5,6 +5,7 @@ import com.amazonaws.services.identitymanagement.AmazonIdentityManagementClient;
 import com.amazonaws.services.identitymanagement.model.*;
 import org.apache.directory.api.ldap.model.constants.SchemaConstants;
 import org.apache.directory.api.ldap.model.entry.*;
+import org.apache.directory.api.ldap.model.exception.LdapInvalidAttributeValueException;
 import org.apache.directory.api.ldap.model.exception.LdapInvalidDnException;
 import org.apache.directory.api.ldap.model.exception.LdapNoSuchObjectException;
 import org.apache.directory.api.ldap.model.name.Dn;
@@ -42,8 +43,10 @@ public class LDAPIAMPoller {
     private String USER_FMT;
     private String accessKey;
     private String secretKey;
+    private String ROLE_FMT;
+    private String rolesDN;
 
-    public LDAPIAMPoller(DirectoryService directoryService) {
+    public LDAPIAMPoller(DirectoryService directoryService) throws LdapException {
         this.directory = directoryService;
 
         readConfig();
@@ -70,8 +73,10 @@ public class LDAPIAMPoller {
             }
             groupsDN = "ou=groups," + rootDN;
             usersDN = "ou=users," + rootDN;
+            rolesDN = "ou=roles," + rootDN;
             GROUP_FMT = "cn=%s," + groupsDN;
             USER_FMT = "uid=%s," + usersDN;
+            ROLE_FMT = "uid=%s,ou=roles," + rootDN;
             ensureRootDN();
 
             if (config.get("pollPeriod") != null) {
@@ -93,6 +98,10 @@ public class LDAPIAMPoller {
                 directory.getDnFactory().create(groupsDN)))) {
             createEntry(groupsDN, "organizationalUnit");
         }
+        if (!directory.getPartitionNexus().hasEntry(new HasEntryOperationContext(directory.getAdminSession(),
+                directory.getDnFactory().create(rolesDN)))) {
+            createEntry(rolesDN, "organizationalUnit");
+        }
     }
 
     private void createEntry(String dn, String clazz) throws LdapException {
@@ -111,11 +120,97 @@ public class LDAPIAMPoller {
         try {
             populateGroupsFromIAM();
             populateUsersFromIAM();
+            populateRolesFromIAM();
         } catch (Throwable e) {
             LOG.error("Exception polling", e);
         }
         LOG.info("*** IAM account update finished");
     }
+
+    private void populateRolesFromIAM() {
+        AmazonIdentityManagementClient client = new AmazonIdentityManagementClient(credentials);
+
+        try {
+            ListRolesResult res = client.listRoles();
+            while (true) {
+                for (Role role : res.getRoles()) {
+                    try {
+                        Entry groupEntry = getOrCreateRoleGroup(role);
+                        addRole(role, groupEntry);
+                        LOG.info("Added role " + role.getRoleName() + " at " + rolesDN);
+                    } catch (Throwable e) {
+                        LOG.error("Exception processing role " + role.getRoleName(), e);
+                    }
+                }
+                if (res.isTruncated()) {
+                    res = client.listRoles(new ListRolesRequest().withMarker(res.getMarker()));
+                } else {
+                    break;
+                }
+            }
+        } finally {
+            client.shutdown();
+        }
+    }
+
+    private Entry getOrCreateRoleGroup(Role role) throws LdapException {
+        Group group = new Group(role.getPath(), role.getRoleName(), role.getRoleId(), role.getArn(), role.getCreateDate());
+        return addGroup(group);
+    }
+
+    private void addRole(Role role, Entry roleGroup) throws LdapException {
+        Entry existingRole = getExistingRole(role);
+        if (existingRole != null) {
+            directory.getAdminSession().modify(existingRole.getDn(),
+                    new DefaultModification(ModificationOperation.REPLACE_ATTRIBUTE, "accessKey", accessKey),
+                    new DefaultModification(ModificationOperation.REPLACE_ATTRIBUTE, "gidNumber", roleGroup.get("gidNumber").getString())
+            );
+            if (!roleGroup.contains("memberUid", role.getRoleName())) {
+                directory.getAdminSession().modify(roleGroup.getDn(),
+                        new DefaultModification(ModificationOperation.ADD_ATTRIBUTE, "memberUid", role.getRoleName()));
+            }
+            return;
+        }
+
+        DefaultEntry ent = new DefaultEntry(directory.getSchemaManager(), directory.getDnFactory().create(String.format(ROLE_FMT, role.getRoleName())));
+        ent.put(SchemaConstants.OBJECT_CLASS_AT, "posixAccount", "shadowAccount", "iamaccount", "iamrole");
+        ent.put("accessKey", role.getRoleId());
+        ent.put("uid", role.getRoleName());
+        ent.put(SchemaConstants.ENTRY_CSN_AT, directory.getCSN().toString());
+        ent.put(SchemaConstants.ENTRY_UUID_AT, UUID.randomUUID().toString());
+        ent.put("cn", role.getRoleName());
+        ent.put("uidNumber", allocateUserID(role.getArn()));
+        ent.put("gidNumber", roleGroup.get("gidNumber").getString());
+        ent.put("shadowLastChange", "10877");
+        ent.put("shadowExpire", "-1");
+        ent.put("shadowInactive", "-1");
+        ent.put("shadowFlag", "0");
+        ent.put("shadowWarning", "7");
+        ent.put("shadowMin", "0");
+        ent.put("shadowMax", "999999");
+        ent.put("loginshell", "/bin/bash");
+        ent.put("homedirectory", "/home/" + role.getRoleName());
+        add(ent);
+
+        directory.getAdminSession().modify(roleGroup.getDn(),
+                new DefaultModification(ModificationOperation.ADD_ATTRIBUTE, "memberUid", role.getRoleName()));
+    }
+
+    private Entry getExistingRole(Role role) throws LdapException {
+        LookupOperationContext lookupContext = new LookupOperationContext( directory.getAdminSession(),
+                directory.getDnFactory().create(String.format(ROLE_FMT, role.getRoleName())), SchemaConstants.ALL_USER_ATTRIBUTES, SchemaConstants.ALL_OPERATIONAL_ATTRIBUTES);
+
+        try {
+            Entry roleEntry = directory.getPartitionNexus().lookup( lookupContext );
+            if (roleEntry != null && roleEntry.hasObjectClass("iamaccount")) {
+                return roleEntry;
+            }
+        } catch (LdapNoSuchObjectException e) {
+            // Fallthrough
+        }
+        return null;
+    }
+
     private void populateGroupsFromIAM() {
         AmazonIdentityManagementClient client = new AmazonIdentityManagementClient(credentials);
 
@@ -141,13 +236,13 @@ public class LDAPIAMPoller {
         }
     }
 
-    private void addGroup(Group iamGroup) throws LdapException {
+    private Entry addGroup(Group iamGroup) throws LdapException {
         Entry existingGroup = getExistingGroup(iamGroup);
         if (existingGroup != null) {
-            return;
+            return existingGroup;
         }
 
-        String gid = allocateGroupID(iamGroup.getGroupName());
+        String gid = allocateGroupID(iamGroup.getArn());
         Entry group = new DefaultEntry(directory.getSchemaManager(), directory.getDnFactory().create(String.format(GROUP_FMT, iamGroup.getGroupName())));
         group.put(SchemaConstants.OBJECT_CLASS_AT, "posixGroup", "iamgroup");
         group.put("gidNumber", gid);
@@ -155,6 +250,7 @@ public class LDAPIAMPoller {
         group.put(SchemaConstants.CN_AT, iamGroup.getGroupName());
         group.put(SchemaConstants.ENTRY_UUID_AT, UUID.randomUUID().toString());
         add(group);
+        return group;
     }
 
     private Entry getExistingGroup(Group iamGroup) throws LdapException {
@@ -253,7 +349,7 @@ public class LDAPIAMPoller {
         ent.put(SchemaConstants.ENTRY_CSN_AT, directory.getCSN().toString());
         ent.put(SchemaConstants.ENTRY_UUID_AT, UUID.randomUUID().toString());
         ent.put("cn", user.getUserName());
-        ent.put("uidNumber", allocateUserID(user.getUserName()));
+        ent.put("uidNumber", allocateUserID(user.getArn()));
         ent.put("gidNumber", group.get("gidNumber").getString());
         ent.put("shadowLastChange", "10877");
         ent.put("shadowExpire", "-1");

@@ -47,12 +47,12 @@ public class AWSIAMAuthenticator extends AbstractAuthenticator {
         if (getDirectoryService() != null) {
             try {
                 delegatedAuth.init(getDirectoryService());
+                poller = new LDAPIAMPoller(getDirectoryService());
+                poller.start();
             } catch (LdapException e) {
                 LOG.error("Exception initializing delegated SimpleAuthenticator", e);
                 throw new RuntimeException(e);
             }
-            poller = new LDAPIAMPoller(getDirectoryService());
-            poller.start();
         }
     }
 

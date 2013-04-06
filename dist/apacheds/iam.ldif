@@ -117,3 +117,11 @@ m-must: rootDN
 m-must: cn
 m-may: pollPeriod
 
+dn: m-oid=0.9.2342.19200300.101.1.10, ou=objectclasses, cn=iam, ou=schema
+objectclass: metaObjectClass
+objectclass: metaTop
+objectclass: top
+m-oid: 0.9.2342.19200300.101.1.10
+m-name: iamrole
+m-supObjectClass: top
+m-typeObjectClass: AUXILIARY
