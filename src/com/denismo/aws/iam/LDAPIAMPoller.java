@@ -4,20 +4,29 @@ import com.amazonaws.auth.BasicAWSCredentials;
 import com.amazonaws.services.identitymanagement.AmazonIdentityManagementClient;
 import com.amazonaws.services.identitymanagement.model.*;
 import org.apache.directory.api.ldap.model.constants.SchemaConstants;
+import org.apache.directory.api.ldap.model.cursor.CursorException;
 import org.apache.directory.api.ldap.model.entry.*;
-import org.apache.directory.api.ldap.model.exception.LdapInvalidAttributeValueException;
 import org.apache.directory.api.ldap.model.exception.LdapInvalidDnException;
 import org.apache.directory.api.ldap.model.exception.LdapNoSuchObjectException;
+import org.apache.directory.api.ldap.model.filter.ExprNode;
+import org.apache.directory.api.ldap.model.filter.FilterParser;
+import org.apache.directory.api.ldap.model.message.DeleteRequestImpl;
+import org.apache.directory.api.ldap.model.message.SearchScope;
 import org.apache.directory.api.ldap.model.name.Dn;
 import org.apache.directory.api.ldap.model.name.Rdn;
+import org.apache.directory.api.ldap.model.schema.normalizers.ConcreteNameComponentNormalizer;
+import org.apache.directory.api.ldap.model.schema.normalizers.NameComponentNormalizer;
 import org.apache.directory.server.core.api.DirectoryService;
 import org.apache.directory.api.ldap.model.exception.LdapException;
-import org.apache.directory.server.core.api.interceptor.context.AddOperationContext;
-import org.apache.directory.server.core.api.interceptor.context.HasEntryOperationContext;
-import org.apache.directory.server.core.api.interceptor.context.LookupOperationContext;
+import org.apache.directory.server.core.api.filtering.EntryFilteringCursor;
+import org.apache.directory.server.core.api.interceptor.context.*;
+import org.apache.directory.server.core.api.normalization.FilterNormalizingVisitor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.IOException;
+import java.text.ParseException;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.UUID;
 import java.util.concurrent.Executors;
@@ -45,6 +54,7 @@ public class LDAPIAMPoller {
     private String secretKey;
     private String ROLE_FMT;
     private String rolesDN;
+    private boolean firstRun = true;
 
     public LDAPIAMPoller(DirectoryService directoryService) throws LdapException {
         this.directory = directoryService;
@@ -77,7 +87,7 @@ public class LDAPIAMPoller {
             GROUP_FMT = "cn=%s," + groupsDN;
             USER_FMT = "uid=%s," + usersDN;
             ROLE_FMT = "uid=%s,ou=roles," + rootDN;
-            ensureRootDN();
+            ensureDNs();
 
             if (config.get("pollPeriod") != null) {
                 pollPeriod = Integer.parseInt(config.get("pollPeriod").getString());
@@ -87,7 +97,7 @@ public class LDAPIAMPoller {
         }
     }
 
-    private void ensureRootDN() throws LdapException {
+    private void ensureDNs() throws LdapException, IOException, ParseException, CursorException {
         directory.getPartitionNexus().hasEntry(new HasEntryOperationContext(directory.getAdminSession(),
                 directory.getDnFactory().create(rootDN)));
         if (!directory.getPartitionNexus().hasEntry(new HasEntryOperationContext(directory.getAdminSession(),
@@ -101,6 +111,31 @@ public class LDAPIAMPoller {
         if (!directory.getPartitionNexus().hasEntry(new HasEntryOperationContext(directory.getAdminSession(),
                 directory.getDnFactory().create(rolesDN)))) {
             createEntry(rolesDN, "organizationalUnit");
+        }
+    }
+
+    private void clearDN(String dnStr) throws LdapException, ParseException, IOException, CursorException {
+        Dn dn = directory.getDnFactory().create(dnStr);
+        dn.apply(directory.getSchemaManager());
+        ExprNode filter = FilterParser.parse(directory.getSchemaManager(), "(ObjectClass=*)");
+        NameComponentNormalizer ncn = new ConcreteNameComponentNormalizer( directory.getSchemaManager() );
+        FilterNormalizingVisitor visitor = new FilterNormalizingVisitor( ncn, directory.getSchemaManager() );
+        filter.accept(visitor);
+        SearchOperationContext context = new SearchOperationContext(directory.getAdminSession(),
+                dn, SearchScope.SUBTREE, filter, SchemaConstants.ALL_USER_ATTRIBUTES, SchemaConstants.ALL_OPERATIONAL_ATTRIBUTES);
+        EntryFilteringCursor cursor = directory.getPartitionNexus().search(context);
+        cursor.beforeFirst();
+        Collection<Dn> dns = new ArrayList<Dn>();
+        while (cursor.next()) {
+            Entry ent = cursor.get();
+            if (ent.getDn().equals(dn)) continue;
+            dns.add(ent.getDn());
+        }
+        cursor.close();
+
+        LOG.info("Deleting " + dns.size() + " items from under " + dnStr);
+        for (Dn deleteDn: dns) {
+            directory.getAdminSession().delete(deleteDn);
         }
     }
 
@@ -118,6 +153,7 @@ public class LDAPIAMPoller {
     private void pollIAM() {
         LOG.info("*** Updating accounts from IAM");
         try {
+            clearDNs();
             populateGroupsFromIAM();
             populateUsersFromIAM();
             populateRolesFromIAM();
@@ -125,6 +161,15 @@ public class LDAPIAMPoller {
             LOG.error("Exception polling", e);
         }
         LOG.info("*** IAM account update finished");
+    }
+
+    private void clearDNs() throws LdapException, IOException, ParseException, CursorException {
+        if (firstRun) {
+            firstRun = false;
+            clearDN(usersDN);
+            clearDN(groupsDN);
+            clearDN(rolesDN);
+        }
     }
 
     private void populateRolesFromIAM() {

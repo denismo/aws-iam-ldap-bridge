@@ -78,7 +78,7 @@ public class UIDAllocator {
             } catch (ConditionalCheckFailedException ccf) {
                 counter = client.getItem(new GetItemRequest().withTableName(table).withKey(new Key(new AttributeValue().withS(name))).withAttributesToGet("uidNumber"))
                         .getItem().get("uidNumber").getN();
-                LOG.info("Name " + name + " has ID " + counter);
+                LOG.info("Name " + name + " got ID " + counter);
                 return counter;
             }
         } else {
@@ -89,18 +89,9 @@ public class UIDAllocator {
     }
 
     private String getNextID(AmazonDynamoDBClient client) {
-        Map<String, AttributeValue> item = new HashMap<String, AttributeValue>();
-        item.put("Name", new AttributeValue().withS("GlobalCounter"));
-        item.put("Value", new AttributeValue().withN("1001"));
-        try {
-            client.putItem(new PutItemRequest().withTableName(table).withItem(item).
-                    withExpected(Collections.singletonMap("Name", new ExpectedAttributeValue(false))));
-            return "1001";
-        } catch (ConditionalCheckFailedException e) {
-            UpdateItemResult updated = client.updateItem(new UpdateItemRequest().withTableName(table).withKey(new Key(new AttributeValue("GlobalCounter"))).
-                    withAttributeUpdates(Collections.singletonMap("Value", new AttributeValueUpdate(new AttributeValue().withN("1"), AttributeAction.ADD))).
-                    withReturnValues(ReturnValue.UPDATED_NEW));
-            return updated.getAttributes().get("Value").getN();
-        }
+        UpdateItemResult updated = client.updateItem(new UpdateItemRequest().withTableName("TestID").withKey(new Key(new AttributeValue("GlobalCounter"))).
+                withAttributeUpdates(Collections.singletonMap("Value", new AttributeValueUpdate(new AttributeValue().withN("1"), AttributeAction.ADD))).
+                withReturnValues(ReturnValue.UPDATED_NEW));
+        return String.valueOf(1000 +  Integer.parseInt(updated.getAttributes().get("Value").getN()));
     }
 }
