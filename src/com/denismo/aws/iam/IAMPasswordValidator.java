@@ -3,6 +3,7 @@ package com.denismo.aws.iam;
 import com.amazonaws.AmazonClientException;
 import com.amazonaws.auth.AWSCredentials;
 import com.amazonaws.auth.BasicAWSCredentials;
+import com.amazonaws.auth.BasicSessionCredentials;
 import com.amazonaws.services.identitymanagement.AmazonIdentityManagementClient;
 import org.apache.directory.api.ldap.model.entry.Entry;
 import org.apache.directory.api.ldap.model.exception.LdapAuthenticationException;
@@ -18,18 +19,18 @@ import org.slf4j.LoggerFactory;
 public class IAMPasswordValidator {
     private static final Logger LOG = LoggerFactory.getLogger(IAMPasswordValidator.class);
     public boolean verifyIAMPassword(Entry user, String pw) throws LdapInvalidAttributeValueException, LdapAuthenticationException {
-        String accessKey;
+        boolean role = false;
+        AWSCredentials creds;
         if (isRole(user)) {
+            role = true;
             String[] parts = pw.split("\\|");
-            if (parts == null || parts.length < 2) throw new LdapAuthenticationException();
-            accessKey = parts[0];
-            pw = parts[1];
+            if (parts == null || parts.length < 3) throw new LdapAuthenticationException();
+            creds = new BasicSessionCredentials(parts[0], parts[1], parts[2]);
         } else {
-            accessKey = user.get("accessKey").getString();
+            creds = new BasicAWSCredentials(user.get("accessKey").getString(), pw);
         }
-        LOG.debug("Verifying user {} with accessKey <hidden> and secretKey <hidden>",
-                user.get("uid").getString());
-        AWSCredentials creds = new BasicAWSCredentials(accessKey, pw);
+        LOG.debug("Verifying {} {} with accessKey <hidden> and secretKey <hidden>",
+                role ? "role":"user", user.get("uid").getString());
         AmazonIdentityManagementClient client = new AmazonIdentityManagementClient(creds);
         try {
             client.getAccountSummary();
