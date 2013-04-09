@@ -43,10 +43,13 @@
         <copy file="${distdir}/auth.ldif" todir="${targetdir}" />
 
         <copy todir="${targetdir}/lib">
-            <fileset dir="${ivy.lib.dir}" includes="**/*.jar" />
+            <fileset dir="${ivy.lib.dir}" includes="**/*.jar" excludes="*javadoc*,*sources*"/>
         </copy>
 
         <copy todir="${targetdir}/lib" file="${basedir}/apacheds_awsiam.jar" />
+
+        <delete file="${basedir}/target/apacheds.zip" failonerror="false" />
+        <zip file="${basedir}/target/apacheds.zip" basedir="${basedir}/target"/>
     </target>
 
 </project>

@@ -25,14 +25,13 @@ import java.net.SocketAddress;
  * Date: 30/03/13
  * Time: 10:31 PM
  */
-// TODO: Proper logging
-// TODO: ant based build file with Ivy dependencies
 public class AWSIAMAuthenticator extends AbstractAuthenticator {
     private static final Logger LOG = LoggerFactory.getLogger(AWSIAMAuthenticator.class);
 
     private final IAMPasswordValidator validator = new IAMPasswordValidator();
     private LDAPIAMPoller poller;
     private SimpleAuthenticator delegatedAuth;
+    private boolean disabled;
 
     public AWSIAMAuthenticator() {
         super(AuthenticationLevel.SIMPLE);
@@ -51,14 +50,14 @@ public class AWSIAMAuthenticator extends AbstractAuthenticator {
                 poller.start();
             } catch (LdapException e) {
                 LOG.error("Exception initializing delegated SimpleAuthenticator", e);
-                throw new RuntimeException(e);
+                disabled=true;
             }
         }
     }
 
     @Override
     public LdapPrincipal authenticate(BindOperationContext bindContext) throws Exception {
-        if (!isAWSAccount(bindContext)) {
+        if (!isAWSAccount(bindContext) || disabled) {
             LOG.info("Skipping " + bindContext.getDn() + " - not an AWS account");
             if (delegatedAuth == null) {
                 LOG.error("Delegated auth is null");

@@ -45,8 +45,10 @@ You should get a list of your IAM accounts.
 
 Note: it is up to you to configure the PAM LDAP or similar authentication mechanism. You can use this guide for configuration:
 - http://wiki.debian.org/LDAP/PAM
-Pick "libnss-ldapd/libpam-ldapd" option as I found it to work the best with ApacheDS. After successful configuration you
-should be able to see the users and groups using "getent passwd" and "getent group".
+Pick "libnss-ldapd/libpam-ldapd" option as I found it to work the best with ApacheDS. You'll also need to modify /etc/ssh/sshd_config by
+ commenting out the line of #PasswordAuthentication no.
+
+After successful configuration of LDAP and NSLCD you should be able to see the users and groups using "getent passwd" and "getent group".
 
 Security notes
 ==============
