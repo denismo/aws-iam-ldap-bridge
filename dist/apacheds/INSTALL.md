@@ -5,16 +5,21 @@ TODO:
 Introduction
 ============
 
+This project provides an implementation of Unix PAM authentication using AWS IAM ("Identity and Access Management").
+It removes the need for everyone to login using shared certificates, or maintain copy of all certificates on all instances
+for all the users of your team (and operations, and support etc.). It also simplifies the scripted authenticated access from one machine to another.
 
-The bridge periodically populates the LDAP directory location with the users and groups from AWS IAM, and allows for
-authenticating the users against AWS IAM using their AWS IAM Secret Keys as passwords.
+It works by integrating into ApacheDS LDAP server as a plugin. The plugin periodically populates the LDAP directory location with the
+users and groups from AWS IAM. When Linux PAM is configured with LDAP authentication this allows for authenticating the Linux users against
+these replicated AWS IAM users which effectively as if you authenticated against AWS IAM directly.
 
-After that, you can login into Linux using the user names of AWS IAM account, and by typing the secret key as the
-password. After login, the user will have the Linux groups corresponding to the IAM groups that were assigned to them.
+The authentication works based on the AWS IAM user names as Linux account name, and Secret Keys as password.
+After login, the users will have the Linux groups corresponding to the IAM groups that were assigned to them. All accounts (users and groups) are
+created and updated automatically.
 
-Note: The user's AWS Secret Keys are never stored in any persistent storage or logs.
+> Note: The user's AWS Secret Keys are never stored in any persistent storage or logs.
 
-By default, the users are cached at ou=users,dc=example,dc=com and groups as ou=groups,dc=example,dc=com. You can change
+By default, the users are cached in LDAP at ou=users,dc=example,dc=com and groups as ou=groups,dc=example,dc=com. You can change
 that by modifying the rootDN in auth.ldif and importing it back into the server.
 
 Quick start
