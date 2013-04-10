@@ -87,7 +87,8 @@ You may want to change the following defaults:
 - Enable ACL and change the permissions for the `dn: ads-authenticatorid=awsiamauthenticator,ou=authenticators,ads-interceptorId=authenticationInterceptor,ou=interceptors,ads-directoryServiceId=default,ou=config`,
   as well as the rootDN.
 
-  This entry stores the AWS Access Key and Secret Key for the authenticator, and rootDN stores all the information about accounts.
+    This entry stores the AWS Access Key and Secret Key for the authenticator, and rootDN stores all the information about accounts. You need to prevent any logged in users
+    from modifying the account's keys and group information (only admin should be allowed to do that).
 
 Configuring an existing ApacheDS LDAP server
 ============================================
