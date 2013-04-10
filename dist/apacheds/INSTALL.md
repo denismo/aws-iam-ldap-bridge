@@ -1,6 +1,5 @@
 TODO:
 - manual configuration
-- IAM permissions
 
 Introduction
 ============
@@ -23,8 +22,8 @@ those are filtered out of search results if `ads-dspasswordhidden` property is s
 By default, the users are cached in LDAP at ou=users,dc=example,dc=com and groups as ou=groups,dc=example,dc=com. You can change
 that by modifying the rootDN in auth.ldif and importing it back into the server.
 
-> *You should also be aware that this project is in its early stages. No formal security assessment has been done against it. Considering that
-you are NOT advised to use it for any security sensitive application. Feel free to evaluate this project but be aware that you use it at your own risk.*
+> _You should also be aware that this project is in its early stages. No formal security assessment has been done against it. Considering that
+you are NOT advised to use it for any security sensitive application. Feel free to evaluate this project but be aware that you use it at your own risk._
 
 Quick start
 ===========
@@ -39,7 +38,9 @@ to fetch the users and groups, and authenticate with AWS IAM on their behalf.
 
 1. Extract the contents of the archive
 
-1. Edit the modify.ldif and change the values for accessKey and secretKey. The specified user
+1. Edit the modify.ldif and change the values for `accessKey` and `secretKey`. The specified user must have the following permissions:
+# Read/Write access to DynamoDB (you can restrict read/write to specific DynamoDB tables with names `IAMUsers`, `IAMGroups`, `IAMRoles`)
+# Read access to IAM List* and Get* operations.
 
 1. Start the ApacheDS server (assuming Linux):
 
@@ -63,23 +64,23 @@ to fetch the users and groups, and authenticate with AWS IAM on their behalf.
 
     You should get a list of your IAM accounts.
 
-> *Note:* it is up to you to configure the PAM LDAP or similar authentication mechanism. You can use this guide for configuration:
-- http://wiki.debian.org/LDAP/PAM. Pick "libnss-ldapd/libpam-ldapd" option as I found it to work the best with ApacheDS. You'll also need to modify /etc/ssh/sshd_config by
- commenting out the line of #PasswordAuthentication no.
-After successful configuration of LDAP and NSLCD you should be able to see the users and groups using "getent passwd" and "getent group".
+> *Note:* it is up to you to configure the PAM LDAP or similar authentication mechanism. You can use this guide for configuration <http://wiki.debian.org/LDAP/PAM/>.
+Pick "libnss-ldapd/libpam-ldapd" option as I found it to work the best with ApacheDS. You'll also need to modify /etc/ssh/sshd_config by
+ commenting out the line of `#PasswordAuthentication no`.
+After successful configuration of LDAP and NSLCD you should be able to see the users and groups using `getent passwd` and `getent group`
 If that works, you should now be able to login using the username of one of your IAM accounts, and using the secret key as the password.
 
 Security notes
 ==============
 
-The default configuration is *INSECURE* however you are free to alter it to your requirements. It should not affect the behavior of the custom authenticator.
+The default configuration is _INSECURE_ however you are free to alter it to your requirements. It should not affect the behavior of the custom authenticator.
 
 You may want to change the following defaults:
-- The default "uid=admin,ou=system" password, "secret" by default
+- The default `uid=admin,ou=system` password, `secret` by default
 - Disable anonymous binds
 - Enable TLS/SASL or LDAPS
 - Change the rootDN where the users/groups are stored
-- Enable ACL and change the permissions for the dn: ads-authenticatorid=awsiamauthenticator,ou=authenticators,ads-interceptorId=authenticationInterceptor,ou=interceptors,ads-directoryServiceId=default,ou=config
+- Enable ACL and change the permissions for the `dn: ads-authenticatorid=awsiamauthenticator,ou=authenticators,ads-interceptorId=authenticationInterceptor,ou=interceptors,ads-directoryServiceId=default,ou=config`
   This entry stores the AWS Access Key and Secret Key for the authenticator
 
 Configuring an existing ApacheDS LDAP server

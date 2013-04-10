@@ -107,7 +107,7 @@ public class UIDAllocator {
     }
 
     private String getNextID(AmazonDynamoDBClient client) {
-        UpdateItemResult updated = client.updateItem(new UpdateItemRequest().withTableName("TestID").withKey(new Key(new AttributeValue("GlobalCounter"))).
+        UpdateItemResult updated = client.updateItem(new UpdateItemRequest().withTableName(table).withKey(new Key(new AttributeValue("GlobalCounter"))).
                 withAttributeUpdates(Collections.singletonMap("Value", new AttributeValueUpdate(new AttributeValue().withN("1"), AttributeAction.ADD))).
                 withReturnValues(ReturnValue.UPDATED_NEW));
         return String.valueOf(1000 +  Integer.parseInt(updated.getAttributes().get("Value").getN()));
