@@ -5,9 +5,6 @@ TODO:
 Introduction
 ============
 
-This package contains a self-contained installation of ApacheDS 2.0.0-M11 with AWS IAM bridge. It is designed to be used
-straight away on any Linux system which has Java 6 without any manual configuration. For example, it can be embedded into
-an AMI and used for all your servers to allow the AWS IAM authentication of Linux users.
 
 The bridge periodically populates the LDAP directory location with the users and groups from AWS IAM, and allows for
 authenticating the users against AWS IAM using their AWS IAM Secret Keys as passwords.
@@ -23,34 +20,43 @@ that by modifying the rootDN in auth.ldif and importing it back into the server.
 Quick start
 ===========
 
+Download the binary package from <a></a>.
+This package contains a self-contained installation of ApacheDS 2.0.0-M11 with AWS IAM bridge. It is designed to be used
+straight away on any Linux system which has Java 6 without any manual configuration. For example, it can be embedded into
+an AMI and used for all your servers to allow the AWS IAM authentication of Linux users.
+
 To start using the server, you need to configure your AWS access and secret keys that the authenticator is going to use
 to fetch the users and groups, and authenticate with AWS IAM on their behalf.
 
+1. Extract the contents of the archive
+
 1. Edit the modify.ldif and change the values for accessKey and secretKey
 
-2. Start the ApacheDS server (assuming Linux):
- > apacheds&
+1. Start the ApacheDS server (assuming Linux):
 
- > sleep 10
+        > apacheds&
 
-3. Apply the AWS configuration
- > ldapmodify -H ldap://localhost:10389 -D uid=admin,ou=system -w secret -x -f modify.ldif
+        > sleep 10
 
-4. Restart the ApacheDS server
- > killall apacheds
+1. Apply the AWS configuration
 
- > apacheds&
+        > ldapmodify -H ldap://localhost:10389 -D uid=admin,ou=system -w secret -x -f modify.ldif
 
-After that the server should be filled with the users/groups. You can verify that by executing the following:
- >  ldapsearch -H ldap://localhost:10389 -D "uid=admin,ou=system" -x -w secret -b "dc=example,dc=com" "(objectclass=posixaccount)"
+1. Restart the ApacheDS server
 
-You should get a list of your IAM accounts.
+        > killall apacheds
 
-Note: it is up to you to configure the PAM LDAP or similar authentication mechanism. You can use this guide for configuration:
-- http://wiki.debian.org/LDAP/PAM
-Pick "libnss-ldapd/libpam-ldapd" option as I found it to work the best with ApacheDS. You'll also need to modify /etc/ssh/sshd_config by
+        > apacheds&
+
+    After that the server should be filled with the users/groups. You can verify that by executing the following:
+
+        >  ldapsearch -H ldap://localhost:10389 -D "uid=admin,ou=system" -x -w secret -b "dc=example,dc=com" "(objectclass=posixaccount)"
+
+    You should get a list of your IAM accounts.
+
+> Note: it is up to you to configure the PAM LDAP or similar authentication mechanism. You can use this guide for configuration:
+- http://wiki.debian.org/LDAP/PAM. Pick "libnss-ldapd/libpam-ldapd" option as I found it to work the best with ApacheDS. You'll also need to modify /etc/ssh/sshd_config by
  commenting out the line of #PasswordAuthentication no.
-
 After successful configuration of LDAP and NSLCD you should be able to see the users and groups using "getent passwd" and "getent group".
 If that works, you should now be able to login using the username of one of your IAM accounts, and using the secret key as the password.
 
