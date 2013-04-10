@@ -51,6 +51,7 @@
         <deltree dir="${targetdir}" />
         <mkdir dir="${targetdir}" />
 
+        <copy file="${basedir}/INSTALL.md" todir="${targetdir}"/>
         <copy todir="${targetdir}">
             <fileset dir="${distdir}" />
         </copy>

@@ -18,4 +18,3 @@ For more information, please read the `INSTALL`_ document inside of the installa
 Note: There is a bug in ApacheDS 2.0.0-M11 which prevents custom authenticators from running. The installation package
 for this project provides a patched package of ApahacheDS 2.0.0-M11.
 
-.. _INSTALL: https://bitbucket.org/denismo/iam4apacheds/src/6f544c8bd80886a0c02315dc980f23a2cf0761a7/dist/apacheds/INSTALL?at=master
