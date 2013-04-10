@@ -49,6 +49,7 @@ Pick "libnss-ldapd/libpam-ldapd" option as I found it to work the best with Apac
  commenting out the line of #PasswordAuthentication no.
 
 After successful configuration of LDAP and NSLCD you should be able to see the users and groups using "getent passwd" and "getent group".
+If that works, you should now be able to login using the username of one of your IAM accounts, and using the secret key as the password.
 
 Security notes
 ==============
