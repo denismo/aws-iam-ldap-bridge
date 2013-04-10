@@ -12,9 +12,9 @@ It works by integrating into ApacheDS LDAP server as a plugin. The plugin period
 users and groups from AWS IAM. When Linux PAM is configured with LDAP authentication this allows for authenticating the Linux users against
 these replicated AWS IAM users which effectively as if you authenticated against AWS IAM directly.
 
-The authentication works based on the AWS IAM user names as Linux account name, and Secret Keys as password.
+The authentication works based on using the AWS IAM user name as Linux account name, and (the first) Secret Key as password.
 After login, the users will have the Linux groups corresponding to the IAM groups that were assigned to them. All accounts (users and groups) are
-created and updated automatically.
+created and updated automatically. If the user does not have access key/secret key the account is not created in LDAP.
 
 > *Note:* The user's AWS Secret Keys are never stored in any persistent storage or logs. Only user names and accessKeys are stored in LDAP, and
 those are filtered out of search results if `ads-dspasswordhidden` property is set.
@@ -41,6 +41,7 @@ to fetch the users and groups, and authenticate with AWS IAM on their behalf.
 1. Edit the modify.ldif and change the values for `accessKey` and `secretKey`.
 
     The specified user must have the following permissions:
+
     * Read/Write access to DynamoDB (you can restrict read/write to specific DynamoDB tables with names `IAMUsers`, `IAMGroups`, `IAMRoles`)
     * Read access to IAM List* and Get* operations.
 
@@ -67,7 +68,7 @@ to fetch the users and groups, and authenticate with AWS IAM on their behalf.
     You should get a list of your IAM accounts.
 
 > *Note:* it is up to you to configure the PAM LDAP or similar authentication mechanism. You can use this guide for configuration <http://wiki.debian.org/LDAP/PAM/>.
-Pick "libnss-ldapd/libpam-ldapd" option as I found it to work the best with ApacheDS. You'll also need to modify /etc/ssh/sshd_config by
+Pick the `libnss-ldapd`/`libpam-ldapd` option as I found it to work the best with ApacheDS (on Ubuntu). You'll also need to modify /etc/ssh/sshd_config by
  commenting out the line of `#PasswordAuthentication no`.
 After successful configuration of LDAP and NSLCD you should be able to see the users and groups using `getent passwd` and `getent group`
 If that works, you should now be able to login using the username of one of your IAM accounts, and using the secret key as the password.
@@ -83,8 +84,10 @@ You may want to change the following defaults:
 - Disable anonymous binds
 - Enable TLS/SASL or LDAPS
 - Change the rootDN where the users/groups are stored
-- Enable ACL and change the permissions for the `dn: ads-authenticatorid=awsiamauthenticator,ou=authenticators,ads-interceptorId=authenticationInterceptor,ou=interceptors,ads-directoryServiceId=default,ou=config`
-  This entry stores the AWS Access Key and Secret Key for the authenticator
+- Enable ACL and change the permissions for the `dn: ads-authenticatorid=awsiamauthenticator,ou=authenticators,ads-interceptorId=authenticationInterceptor,ou=interceptors,ads-directoryServiceId=default,ou=config`,
+  as well as the rootDN.
+
+  This entry stores the AWS Access Key and Secret Key for the authenticator, and rootDN stores all the information about accounts.
 
 Configuring an existing ApacheDS LDAP server
 ============================================
@@ -93,5 +96,4 @@ TBD
 
 Assumptions
 ===========
-- Users have only one access key. If you users have more than one access key, the authenticator may randomly pick one
-of them for authentication. You can check which one it picked by quering the cached LDAP information for that user.
+- Users have only one access key. If you users have more than one access key, the authenticator will pick the first of them for authentication.
