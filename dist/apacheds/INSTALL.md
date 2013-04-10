@@ -38,9 +38,11 @@ to fetch the users and groups, and authenticate with AWS IAM on their behalf.
 
 1. Extract the contents of the archive
 
-1. Edit the modify.ldif and change the values for `accessKey` and `secretKey`. The specified user must have the following permissions:
-# Read/Write access to DynamoDB (you can restrict read/write to specific DynamoDB tables with names `IAMUsers`, `IAMGroups`, `IAMRoles`)
-# Read access to IAM List* and Get* operations.
+1. Edit the modify.ldif and change the values for `accessKey` and `secretKey`.
+
+    The specified user must have the following permissions:
+    * Read/Write access to DynamoDB (you can restrict read/write to specific DynamoDB tables with names `IAMUsers`, `IAMGroups`, `IAMRoles`)
+    * Read access to IAM List* and Get* operations.
 
 1. Start the ApacheDS server (assuming Linux):
 
@@ -76,6 +78,7 @@ Security notes
 The default configuration is _INSECURE_ however you are free to alter it to your requirements. It should not affect the behavior of the custom authenticator.
 
 You may want to change the following defaults:
+
 - The default `uid=admin,ou=system` password, `secret` by default
 - Disable anonymous binds
 - Enable TLS/SASL or LDAPS
