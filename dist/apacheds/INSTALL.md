@@ -30,6 +30,7 @@ to fetch the users and groups, and authenticate with AWS IAM on their behalf.
 
 2. Start the ApacheDS server (assuming Linux):
  > apacheds&
+
  > sleep 10
 
 3. Apply the AWS configuration
@@ -37,10 +38,12 @@ to fetch the users and groups, and authenticate with AWS IAM on their behalf.
 
 4. Restart the ApacheDS server
  > killall apacheds
+
  > apacheds&
 
 After that the server should be filled with the users/groups. You can verify that by executing the following:
  >  ldapsearch -H ldap://localhost:10389 -D "uid=admin,ou=system" -x -w secret -b "dc=example,dc=com" "(objectclass=posixaccount)"
+
 You should get a list of your IAM accounts.
 
 Note: it is up to you to configure the PAM LDAP or similar authentication mechanism. You can use this guide for configuration:
