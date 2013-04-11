@@ -40,8 +40,8 @@ to fetch the users and groups, and authenticate with AWS IAM on their behalf.
 
     The specified user must have the following permissions:
 
-    * Read/Write access to DynamoDB (you can restrict read/write to specific DynamoDB tables with names `IAMUsers`, `IAMGroups`, `IAMRoles`)
-    * Read access to IAM List* and Get* operations.
+    - Read/Write access to DynamoDB (you can restrict read/write to specific DynamoDB tables with names `IAMUsers`, `IAMGroups`, `IAMRoles`)
+    - Read access to IAM List* and Get* operations.
 
 1. Start the ApacheDS server (assuming Linux):
 
