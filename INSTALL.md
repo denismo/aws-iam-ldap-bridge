@@ -1,6 +1,3 @@
-TODO:
-- manual configuration
-
 Introduction
 ============
 
@@ -92,8 +89,35 @@ You may want to change the following defaults:
 
 Configuring an existing ApacheDS LDAP server
 ============================================
-If you installed the ApacheDS by other means, you can add the authenticator to it manually:
-TBD
+At the moment, the plugin requires a custom version of ApacheDS so manual configuration is unlikely. However, in a rare case when you want to reconfigure the provided custom instance,
+here is the list of steps you need to perform:
+
+1. Copy an existing default instance from Apache DS 2.0.0-M11 (or newer)
+    Note that the following steps may only work on the specified default instance - there may be conflicting the configuration
+    in some other custom instance
+
+2. Starts the instance. The following assumes the instance is running on port 10389 on localhost.
+
+3. Import IAM authenticator schema:
+        ldapmodify -H ldap://localhost:10389 -D uid=admin,ou=system -w secret -x -f iam.ldif
+
+4. Import NIS configuration enabler
+        ldapmodify -H ldap://localhost:10389 -D uid=admin,ou=system -w secret -x -f enable_nis.ldif
+
+5. Import authenticator definition
+    You may want to modify the accessKey/secretKey in auth.ldif
+        ldapmodify -H ldap://localhost:10389 -D uid=admin,ou=system -w secret -x -f auth.ldif
+
+6. Import additional configuration options
+    You may want to modify the accessKey/secretKey in modify.ldif
+        ldapmodify -H ldap://localhost:10389 -D uid=admin,ou=system -w secret -x -f modify.ldif
+
+7. Restart the instance
+    You should not see any errors in the console. Wait 15 seconds (scan starts after 10) and then execute user's search:
+        ldapsearch -D "uid=admin,ou=system" -w secret -x -b "dc=example,dc=com" "(objectclass=posixaccount)"
+    You should see your IAM accounts and if your LDAP is configured you should now be able to login using one of them.
+
+After that you are strongly advised to follow the security hardening steps described in *Security notes*. Ideally, never expose this instance to the open Internet, only use it within a VPC in a private subnet.
 
 Assumptions
 ===========
