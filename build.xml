@@ -48,7 +48,7 @@
     </target>
 
     <target name="dist" depends="package">
-        <deltree dir="${targetdir}" />
+        <delete dir="${targetdir}"/>
         <mkdir dir="${targetdir}" />
 
         <copy file="${basedir}/INSTALL.md" todir="${targetdir}"/>
