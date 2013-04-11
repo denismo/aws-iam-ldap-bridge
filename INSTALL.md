@@ -3,7 +3,8 @@ Introduction
 
 This project provides an implementation of Unix PAM authentication using AWS IAM ("Identity and Access Management").
 It removes the need for everyone to login using shared certificates, or maintain copy of all certificates on all instances
-for all the users of your team (and operations, and support etc.). It also simplifies the scripted authenticated access from one machine to another.
+for all the users of your team (and operations, and support etc.).
+It also simplifies the scripted authenticated access from one machine to another via IAM Role-based logins (highly experimental).
 
 It works by integrating into ApacheDS LDAP server as a plugin. The plugin periodically populates the LDAP directory location with the
 users and groups from AWS IAM. When Linux PAM is configured with LDAP authentication this allows for authenticating the Linux users against
