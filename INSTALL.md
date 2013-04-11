@@ -55,10 +55,6 @@ to fetch the users and groups, and authenticate with AWS IAM on their behalf.
 
 1. Restart the ApacheDS server
 
-        killall apacheds
-
-        bash apacheds.sh &
-
     After that the server should be filled with the users/groups. You can verify that by executing the following:
 
         ldapsearch -H ldap://localhost:10389 -D "uid=admin,ou=system" -x -w secret -b "dc=example,dc=com" "(objectclass=posixaccount)"
@@ -66,8 +62,11 @@ to fetch the users and groups, and authenticate with AWS IAM on their behalf.
     You should get a list of your IAM accounts.
 
 > *Note:* it is up to you to configure the PAM LDAP or similar authentication mechanism. You can use this guide for configuration <http://wiki.debian.org/LDAP/PAM/>.
-Pick the `libnss-ldapd`/`libpam-ldapd` option as I found it to work the best with ApacheDS (on Ubuntu). You'll also need to modify /etc/ssh/sshd_config by
- commenting out the line of `#PasswordAuthentication no`.
+Pick the `libnss-ldapd`/`libpam-ldapd` option as I found it to work the best with ApacheDS (on Ubuntu). You'll also need to :
+
+- modify /etc/ssh/sshd_config by commenting out the line of `#PasswordAuthentication no`.
+- modify /etc/pam.d/common-session by adding this line somewhere close to the end: `session     required      pam_mkhomedir.so skel=/etc/skel umask=0022`
+
 After successful configuration of LDAP and NSLCD you should be able to see the users and groups using `getent passwd` and `getent group`
 If that works, you should now be able to login using the username of one of your IAM accounts, and using the secret key as the password.
 
