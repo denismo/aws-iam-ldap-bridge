@@ -61,10 +61,10 @@ to fetch the users and groups, and authenticate with AWS IAM on their behalf.
 
     You should get a list of your IAM accounts.
 
-> *Note:* it is up to you to configure the PAM LDAP or similar authentication mechanism. You can use this guide for configuration <http://wiki.debian.org/LDAP/PAM/>.
+*Note:* it is up to you to configure the PAM LDAP or similar authentication mechanism. You can use this guide for configuration <http://wiki.debian.org/LDAP/PAM/>.
 Pick the `libnss-ldapd`/`libpam-ldapd` option as I found it to work the best with ApacheDS (on Ubuntu). You'll also need to :
 
-- modify /etc/ssh/sshd_config by commenting out the line of `#PasswordAuthentication no`.
+- modify /etc/ssh/sshd_config by commenting out the line of `PasswordAuthentication no`.
 - modify /etc/pam.d/common-session by adding this line somewhere close to the end: `session     required      pam_mkhomedir.so skel=/etc/skel umask=0022`
 
 After successful configuration of LDAP and NSLCD you should be able to see the users and groups using `getent passwd` and `getent group`
