@@ -186,7 +186,7 @@ public class LDAPIAMPoller {
             clearDNs();
             populateGroupsFromIAM();
             populateUsersFromIAM();
-            populateRolesFromIAM();
+//            populateRolesFromIAM();
         } catch (Throwable e) {
             LOG.error("Exception polling", e);
         }
