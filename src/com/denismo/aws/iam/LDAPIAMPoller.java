@@ -18,6 +18,8 @@
 
 package com.denismo.aws.iam;
 
+import com.amazonaws.auth.AWSCredentials;
+import com.amazonaws.auth.AWSCredentialsProvider;
 import com.amazonaws.auth.BasicAWSCredentials;
 import com.amazonaws.services.identitymanagement.AmazonIdentityManagementClient;
 import com.amazonaws.services.identitymanagement.model.*;
@@ -58,7 +60,7 @@ import java.util.concurrent.TimeUnit;
 public class LDAPIAMPoller {
     private static final Logger LOG = LoggerFactory.getLogger(LDAPIAMPoller.class);
 
-    private BasicAWSCredentials credentials;
+    private AWSCredentialsProvider credentials;
     private UIDAllocator userIDAllocator;
     private UIDAllocator groupIDAllocator;
     private DirectoryService directory;
@@ -78,7 +80,17 @@ public class LDAPIAMPoller {
         this.directory = directoryService;
 
         readConfig();
-        credentials = new BasicAWSCredentials(accessKey, secretKey);
+        credentials = new AWSCredentialsProvider() {
+            @Override
+            public void refresh() {
+
+            }
+
+            @Override
+            public AWSCredentials getCredentials() {
+                return new BasicAWSCredentials(accessKey, secretKey);
+            }
+        };
         userIDAllocator = new UIDAllocator(credentials, "Users");
         groupIDAllocator = new UIDAllocator(credentials, "Groups");
         LOG.info("IAMPoller created");

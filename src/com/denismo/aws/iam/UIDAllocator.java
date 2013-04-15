@@ -20,6 +20,9 @@ package com.denismo.aws.iam;
 
 import com.amazonaws.AmazonClientException;
 import com.amazonaws.auth.AWSCredentials;
+import com.amazonaws.auth.AWSCredentialsProvider;
+import com.amazonaws.auth.AWSCredentialsProviderChain;
+import com.amazonaws.auth.DefaultAWSCredentialsProviderChain;
 import com.amazonaws.services.dynamodb.AmazonDynamoDBClient;
 import com.amazonaws.services.dynamodb.model.*;
 import org.apache.directory.api.ldap.model.exception.LdapException;
@@ -40,9 +43,9 @@ public class UIDAllocator {
     private String table;
     private final AmazonDynamoDBClient client;
 
-    public UIDAllocator(AWSCredentials credentials, String space) throws LdapException {
+    public UIDAllocator(AWSCredentialsProvider credentials, String space) throws LdapException {
         this.table = "IAM" + space;
-        client = new AmazonDynamoDBClient(credentials);
+        client = new AmazonDynamoDBClient(new AWSCredentialsProviderChain(new DefaultAWSCredentialsProviderChain(), credentials));
         client.setEndpoint("dynamodb.ap-southeast-2.amazonaws.com");
         createTable();
     }
