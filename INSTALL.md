@@ -20,7 +20,7 @@ those are filtered out of search results if `ads-dspasswordhidden` property is s
 By default, the users are cached in LDAP at ou=users,dc=example,dc=com and groups as ou=groups,dc=example,dc=com. You can change
 that by modifying the rootDN in auth.ldif and importing it back into the server.
 
-> _You should also be aware that this project is in its early stages. No formal security assessment has been done against it. Considering that
+> _You should also be aware that this project is in its early stages. No formal security assessment has been done against it. Considering that,
 you are NOT advised to use it for any security sensitive application. Feel free to evaluate this project but be aware that you use it at your own risk._
 
 Quick start
@@ -46,6 +46,8 @@ to fetch the users and groups, and authenticate with AWS IAM on their behalf.
 
 1. Start the ApacheDS server (assuming Linux):
 
+        cd bin
+
         bash apacheds.sh &
 
         sleep 10
@@ -61,6 +63,24 @@ to fetch the users and groups, and authenticate with AWS IAM on their behalf.
         ldapsearch -H ldap://localhost:10389 -D "uid=admin,ou=system" -x -w secret -b "dc=example,dc=com" "(objectclass=posixaccount)"
 
     You should get a list of your IAM accounts.
+
+1. (Optional) Configure propagation of the access credentials into user session
+
+    There is an ability to propagate the AWS Access Key and Secret Key into the logged-in user session allowing that user to execute the AWS command (for example, with awscli)
+    using their own credentials without the need to pre-configure them in the instance.
+
+    In order to enable it:
+
+        apt-get install python-pam python-ldap
+        pip install configparser
+        cp bin/pam_accesskey.py /lib/security
+        cp bin/etc_aws_iam_ldap.conf /etc
+
+    The modify `/etc/pam.d/common-auth` by adding the following line at the end:
+
+        auth optional pam_python.so pam_permit.py
+
+    You can change `optional` to a more strict requirement if you consider this behavior critical.
 
 *Note:* it is up to you to configure the PAM LDAP or similar authentication mechanism. You can use this guide for configuration <http://wiki.debian.org/LDAP/PAM/>.
 Pick the `libnss-ldapd`/`libpam-ldapd` option as I found it to work the best with ApacheDS (on Ubuntu). You'll also need to :
