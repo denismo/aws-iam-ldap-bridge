@@ -1,3 +1,5 @@
+[![Build Status](https://buildhive.cloudbees.com/job/denismo/job/aws-iam-ldap-bridge/badge/icon)](https://buildhive.cloudbees.com/job/denismo/job/aws-iam-ldap-bridge/)
+
 Building AWS IAM ApacheDS bridge
 ================================
 
