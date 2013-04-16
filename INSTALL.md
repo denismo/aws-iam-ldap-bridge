@@ -47,9 +47,7 @@ to fetch the users and groups, and authenticate with AWS IAM on their behalf.
 1. Start the ApacheDS server (assuming Linux):
 
         cd bin
-
         bash apacheds.sh &
-
         sleep 10
 
 1. Apply the AWS configuration
@@ -74,13 +72,15 @@ to fetch the users and groups, and authenticate with AWS IAM on their behalf.
         apt-get install python-pam python-ldap
         pip install configparser
         cp bin/pam_accesskey.py /lib/security
-        cp bin/etc_aws_iam_ldap.conf /etc
+        cp bin/etc_aws_iam_ldap.conf /etc/aws_iam_ldap.conf
 
     The modify `/etc/pam.d/common-auth` by adding the following line at the end:
 
         auth optional pam_python.so pam_permit.py
 
     You can change `optional` to a more strict requirement if you consider this behavior critical.
+
+    You would need to edit /etc/aws_iam_ldap.conf with the correct URI and base DN
 
 *Note:* it is up to you to configure the PAM LDAP or similar authentication mechanism. You can use this guide for configuration <http://wiki.debian.org/LDAP/PAM/>.
 Pick the `libnss-ldapd`/`libpam-ldapd` option as I found it to work the best with ApacheDS (on Ubuntu). You'll also need to :
