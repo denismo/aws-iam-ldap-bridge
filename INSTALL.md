@@ -117,7 +117,7 @@ here is the list of steps you need to perform:
 
 1. Copy an existing default instance from Apache DS 2.0.0-M11 (or newer)
 
-    Note that the following steps may only work on the specified default instance - there may be conflicting the configuration
+    Note that the following steps may only work on the specified default instance - there may be conflicting configuration
     in some other custom instance
 
 2. Starts the instance. The following assumes the instance is running on port 10389 on localhost.
@@ -132,7 +132,7 @@ here is the list of steps you need to perform:
 
 5. Import authenticator definition
 
-    You may want to modify the accessKey/secretKey in auth.ldif
+    You need to modify the accessKey/secretKey in auth.ldif
 
         ldapmodify -H ldap://localhost:10389 -D uid=admin,ou=system -w secret -x -f auth.ldif
 

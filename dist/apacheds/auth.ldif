@@ -21,5 +21,6 @@ cn: config
 rootdn: dc=example,dc=com
 pollPeriod: 600
 secretkey: <AWS secret access key>
+idGenerator: 1000
 
 

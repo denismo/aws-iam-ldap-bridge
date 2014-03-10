@@ -26,11 +26,10 @@ import com.amazonaws.services.identitymanagement.model.*;
 import org.apache.directory.api.ldap.model.constants.SchemaConstants;
 import org.apache.directory.api.ldap.model.cursor.CursorException;
 import org.apache.directory.api.ldap.model.entry.*;
-import org.apache.directory.api.ldap.model.exception.LdapInvalidDnException;
+import org.apache.directory.api.ldap.model.exception.LdapInvalidAttributeValueException;
 import org.apache.directory.api.ldap.model.exception.LdapNoSuchObjectException;
 import org.apache.directory.api.ldap.model.filter.ExprNode;
 import org.apache.directory.api.ldap.model.filter.FilterParser;
-import org.apache.directory.api.ldap.model.message.DeleteRequestImpl;
 import org.apache.directory.api.ldap.model.message.SearchScope;
 import org.apache.directory.api.ldap.model.name.Dn;
 import org.apache.directory.api.ldap.model.name.Rdn;
@@ -46,9 +45,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.text.ParseException;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.UUID;
+import java.util.*;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
@@ -59,10 +56,12 @@ import java.util.concurrent.TimeUnit;
  */
 public class LDAPIAMPoller {
     private static final Logger LOG = LoggerFactory.getLogger(LDAPIAMPoller.class);
+    private static final Object ID_LOCK = new Object();
+    public static final String ID_GENERATOR = "idGenerator";
 
     private AWSCredentialsProvider credentials;
-    private UIDAllocator userIDAllocator;
-    private UIDAllocator groupIDAllocator;
+//    private UIDAllocator userIDAllocator;
+//    private UIDAllocator groupIDAllocator;
     private DirectoryService directory;
     private int pollPeriod = 600;
     private String groupsDN;
@@ -75,6 +74,7 @@ public class LDAPIAMPoller {
     private String ROLE_FMT;
     private String rolesDN;
     private boolean firstRun = true;
+    private Entry configEntry;
 
     public LDAPIAMPoller(DirectoryService directoryService) throws LdapException {
         this.directory = directoryService;
@@ -91,25 +91,25 @@ public class LDAPIAMPoller {
                 return new BasicAWSCredentials(accessKey, secretKey);
             }
         };
-        userIDAllocator = new UIDAllocator(credentials, "Users");
-        groupIDAllocator = new UIDAllocator(credentials, "Groups");
+//        userIDAllocator = new UIDAllocator(credentials, "Users");
+//        groupIDAllocator = new UIDAllocator(credentials, "Groups");
         LOG.info("IAMPoller created");
     }
 
     private void readConfig() {
         try {
             LookupOperationContext lookupContext = new LookupOperationContext( directory.getAdminSession(),
-                    directory.getDnFactory().create("cn=config,ads-authenticatorid=awsiamauthenticator,ou=authenticators,ads-interceptorId=authenticationInterceptor,ou=interceptors,ads-directoryServiceId=default,ou=config"),
+                    directory.getDnFactory().create("cn=configEntry,ads-authenticatorid=awsiamauthenticator,ou=authenticators,ads-interceptorId=authenticationInterceptor,ou=interceptors,ads-directoryServiceId=default,ou=configEntry"),
                     SchemaConstants.ALL_USER_ATTRIBUTES, SchemaConstants.ALL_OPERATIONAL_ATTRIBUTES);
-            Entry config = directory.getPartitionNexus().lookup(lookupContext);
-            if (config.get("accessKey") != null) {
-                accessKey = config.get("accessKey").getString();
+            configEntry = directory.getPartitionNexus().lookup(lookupContext);
+            if (configEntry.get("accessKey") != null) {
+                accessKey = configEntry.get("accessKey").getString();
             }
-            if (config.get("secretKey") != null) {
-                secretKey = config.get("secretKey").getString();
+            if (configEntry.get("secretKey") != null) {
+                secretKey = configEntry.get("secretKey").getString();
             }
-            if (config.get("rootDN") != null) {
-                rootDN = config.get("rootDN").getString();
+            if (configEntry.get("rootDN") != null) {
+                rootDN = configEntry.get("rootDN").getString();
             }
             groupsDN = "ou=groups," + rootDN;
             usersDN = "ou=users," + rootDN;
@@ -119,8 +119,8 @@ public class LDAPIAMPoller {
             ROLE_FMT = "uid=%s,ou=roles," + rootDN;
             ensureDNs();
 
-            if (config.get("pollPeriod") != null) {
-                pollPeriod = Integer.parseInt(config.get("pollPeriod").getString());
+            if (configEntry.get("pollPeriod") != null) {
+                pollPeriod = Integer.parseInt(configEntry.get("pollPeriod").getString());
             }
         } catch (Throwable e) {
             LOG.error("Exception reading config for LDAPIAMPoller", e);
@@ -291,10 +291,12 @@ public class LDAPIAMPoller {
 
         try {
             ListGroupsResult res = client.listGroups();
+            Set<String> groupNames = new HashSet<String>();
             while (true) {
                 for (Group group : res.getGroups()) {
                     try {
                         addGroup(group);
+                        groupNames.add(group.getGroupName());
                         LOG.info("Added group " + group.getGroupName() + " at " + groupsDN);
                     } catch (Throwable e) {
                         LOG.error("Exception processing group " + group.getGroupName(), e);
@@ -306,8 +308,47 @@ public class LDAPIAMPoller {
                     break;
                 }
             }
+            removeDeletedGroups(groupNames);
         } finally {
             client.shutdown();
+        }
+    }
+
+    private void removeDeletedGroups(Set<String> groupNames) {
+        Collection<Entry> allGroups = getAllEntries(groupsDN, "iamgroup");
+        for (Entry group : allGroups) {
+            if (!groupNames.contains(group.get(SchemaConstants.CN_AT).toString())) {
+                try {
+                    directory.getAdminSession().delete(group.getDn());
+                } catch (LdapException e) {
+                    LOG.error("Unable to delete group " + group.getDn());
+                }
+            }
+        }
+    }
+
+    private Collection<Entry> getAllEntries(String rootDN, String className) {
+        try {
+            Dn dn = directory.getDnFactory().create(rootDN);
+            dn.apply(directory.getSchemaManager());
+            ExprNode filter = FilterParser.parse(directory.getSchemaManager(), String.format("(ObjectClass=%s)", className));
+            NameComponentNormalizer ncn = new ConcreteNameComponentNormalizer( directory.getSchemaManager() );
+            FilterNormalizingVisitor visitor = new FilterNormalizingVisitor( ncn, directory.getSchemaManager() );
+            filter.accept(visitor);
+            SearchOperationContext context = new SearchOperationContext(directory.getAdminSession(),
+                    dn, SearchScope.SUBTREE, filter, SchemaConstants.ALL_USER_ATTRIBUTES, SchemaConstants.ALL_OPERATIONAL_ATTRIBUTES);
+            EntryFilteringCursor cursor = directory.getPartitionNexus().search(context);
+            cursor.beforeFirst();
+            Collection<Entry> entries = new ArrayList<Entry>();
+            while (cursor.next()) {
+                Entry ent = cursor.get();
+                if (ent.getDn().equals(dn)) continue;
+                entries.add(ent);
+            }
+            cursor.close();
+            return entries;
+        } catch (Throwable e) {
+            return Collections.emptyList();
         }
     }
 
@@ -350,7 +391,26 @@ public class LDAPIAMPoller {
     }
 
     private String allocateGroupID(String groupName) {
-        return groupIDAllocator.allocateUID(groupName);
+        return allocateID();
+//        return groupIDAllocator.allocateUID(groupName);
+    }
+
+    private String allocateID() {
+        synchronized (ID_LOCK) {
+            int lastID;
+            String newID;
+            try {
+                lastID = Integer.parseInt(configEntry.get(ID_GENERATOR).getString());
+                newID = String.valueOf(lastID+1);
+                directory.getAdminSession().modify(configEntry.getDn(),
+                        new DefaultModification(ModificationOperation.REPLACE_ATTRIBUTE, ID_GENERATOR, newID)
+                );
+                configEntry.put(ID_GENERATOR, newID);
+            } catch (LdapException e) {
+                throw new RuntimeException(e);
+            }
+            return newID;
+        }
     }
 
     private void populateUsersFromIAM() {
@@ -358,6 +418,7 @@ public class LDAPIAMPoller {
 
         try {
             ListUsersResult res = client.listUsers();
+            Set<String> allUsers = new HashSet<String>();
             while (true) {
                 for (User user : res.getUsers()) {
                     try {
@@ -373,6 +434,7 @@ public class LDAPIAMPoller {
                             continue;
                         }
                         addUser(user, getUserAccessKey(client, user), groupEntry);
+                        allUsers.add(user.getUserName());
                         LOG.info("Added user " + user.getUserName());
                     } catch (Throwable e) {
                         LOG.error("Exception processing user " + user.getUserName(), e);
@@ -384,8 +446,22 @@ public class LDAPIAMPoller {
                     break;
                 }
             }
+            removeDeletedUsers(allUsers);
         } finally {
             client.shutdown();
+        }
+    }
+
+    private void removeDeletedUsers(Set<String> userNames) {
+        Collection<Entry> allUsers = getAllEntries(usersDN, "iamaccount");
+        for (Entry user : allUsers) {
+            if (!userNames.contains(user.get(SchemaConstants.CN_AT).toString())) {
+                try {
+                    directory.getAdminSession().delete(user.getDn());
+                } catch (LdapException e) {
+                    LOG.error("Unable to delete user " + user.getDn());
+                }
+            }
         }
     }
 
@@ -457,7 +533,8 @@ public class LDAPIAMPoller {
     }
 
     private String allocateUserID(String name) {
-        return userIDAllocator.allocateUID(name);
+//        return userIDAllocator.allocateUID(name);
+        return allocateID();
     }
 
     public void start() {
