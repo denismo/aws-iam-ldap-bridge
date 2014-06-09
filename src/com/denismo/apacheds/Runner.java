@@ -22,8 +22,11 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.util.*;
+import java.util.jar.JarFile;
+import java.util.zip.ZipFile;
 
 import com.denismo.apacheds.auth.AWSIAMAuthenticator;
+import com.sun.java.util.jar.pack.UnpackerImpl;
 import org.apache.directory.api.ldap.model.constants.SchemaConstants;
 import org.apache.directory.api.ldap.model.entry.Entry;
 import org.apache.directory.api.ldap.model.exception.LdapException;
@@ -239,16 +242,13 @@ public class Runner {
             entryIAM.put("idGenerator", "1000");
             service.getAdminSession().add(entryIAM);
         }
-        // TODO IAM partition is not visible
-/*
-        Dn dnIAM = new Dn(service.getSchemaManager(), rootDN);
+        Dn dnIAM = service.getDnFactory().create(rootDN);
         if (!service.getAdminSession().exists(dnIAM)) {
             Entry entryIAM = service.newEntry( dnIAM );
-            entryIAM.add("objectClass", "top", "domain", "extensibleObject");
+            entryIAM.add("objectClass", "top", "domain");
             entryIAM.add("dc", "iam");
             service.getAdminSession().add( entryIAM );
         }
-*/
     }
 
     private boolean exists(String s) throws LdapException {
@@ -306,12 +306,13 @@ public class Runner {
         System.setProperty("default.extendedOperation.responses", "org.apache.directory.api.ldap.extras.extended.ads_impl.gracefulDisconnect.GracefulDisconnectFactory");
 
         Runner runner = new Runner();
-        runner.initDirectoryService(getDirectoryPath());
+        runner.initDirectoryService(getDirectoryPath(args));
         runner.startServer();
         System.out.println("Server started on " + serverPort);
     }
 
-    private static File getDirectoryPath() {
+    private static File getDirectoryPath(String[] args) {
+        if (args.length > 0) return new File(args[0]);
         if (!new File("/var").exists()) {
             return new File(System.getProperty("java.io.tmpdir"), "iam_ldap");
         } else {
