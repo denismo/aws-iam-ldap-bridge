@@ -46,6 +46,20 @@ import java.net.SocketAddress;
 public class AWSIAMAuthenticator extends AbstractAuthenticator {
     private static final Logger LOG = LoggerFactory.getLogger(AWSIAMAuthenticator.class);
 
+    public static class Config {
+        public String rootDN = "dc=iam,dc=aws,dc=org";
+        public int pollPeriod = 600;
+    }
+
+    private static Config s_config;
+    public static void setConfig(Config config) {
+        s_config = config;
+    }
+
+    public static Config getConfig() {
+        return s_config;
+    }
+
     private final IAMPasswordValidator validator = new IAMPasswordValidator();
     private LDAPIAMPoller poller;
     private SimpleAuthenticator delegatedAuth;

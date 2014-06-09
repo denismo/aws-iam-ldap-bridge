@@ -19,12 +19,16 @@
 package com.denismo.apacheds;
 
 import java.io.File;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.util.*;
 
+import com.denismo.apacheds.auth.AWSIAMAuthenticator;
+import org.apache.directory.api.ldap.model.constants.SchemaConstants;
 import org.apache.directory.api.ldap.model.entry.Entry;
 import org.apache.directory.api.ldap.model.exception.LdapException;
+import org.apache.directory.api.ldap.model.exception.LdapInvalidDnException;
+import org.apache.directory.api.ldap.model.ldif.LdifReader;
 import org.apache.directory.api.ldap.model.name.Dn;
 import org.apache.directory.api.ldap.model.schema.SchemaManager;
 import org.apache.directory.api.ldap.model.schema.registries.SchemaLoader;
@@ -33,20 +37,28 @@ import org.apache.directory.api.ldap.schemaextractor.impl.DefaultSchemaLdifExtra
 import org.apache.directory.api.ldap.schemaloader.LdifSchemaLoader;
 import org.apache.directory.api.ldap.schemamanager.impl.DefaultSchemaManager;
 import org.apache.directory.api.util.exception.Exceptions;
+import org.apache.directory.server.ApacheDsService;
 import org.apache.directory.server.constants.ServerDNConstants;
 import org.apache.directory.server.core.DefaultDirectoryService;
 import org.apache.directory.server.core.api.CacheService;
 import org.apache.directory.server.core.api.DirectoryService;
 import org.apache.directory.server.core.api.DnFactory;
 import org.apache.directory.server.core.api.InstanceLayout;
+import org.apache.directory.server.core.api.interceptor.context.HasEntryOperationContext;
 import org.apache.directory.server.core.api.partition.Partition;
 import org.apache.directory.server.core.api.schema.SchemaPartition;
 import org.apache.directory.server.core.partition.impl.btree.jdbm.JdbmIndex;
 import org.apache.directory.server.core.partition.impl.btree.jdbm.JdbmPartition;
 import org.apache.directory.server.core.partition.ldif.LdifPartition;
+import org.apache.directory.server.core.partition.ldif.SingleFileLdifPartition;
 import org.apache.directory.server.i18n.I18n;
 import org.apache.directory.server.ldap.LdapServer;
+import org.apache.directory.server.protocol.shared.store.LdifFileLoader;
 import org.apache.directory.server.protocol.shared.transport.TcpTransport;
+import org.apache.directory.server.xdbm.Index;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 /**
  * User: Denis Mikhalkin
  * Date: 10/03/14
@@ -54,9 +66,12 @@ import org.apache.directory.server.protocol.shared.transport.TcpTransport;
  */
 public class Runner {
 
+    private static final Logger IAM_LOG = LoggerFactory.getLogger(Runner.class);
+    private static int serverPort = 10389;
+
     /** The directory service */
     private DirectoryService service;
-
+//    private ApacheDsService service;
     /** The LDAP server */
     private LdapServer server;
 
@@ -76,7 +91,8 @@ public class Runner {
         JdbmPartition partition = new JdbmPartition(service.getSchemaManager()/*, dnFactory*/);
         partition.setId( partitionId );
         partition.setPartitionPath( new File( service.getInstanceLayout().getPartitionsDirectory(), partitionId ).toURI() );
-        partition.setSuffixDn( new Dn( partitionDn ) );
+        partition.setSuffixDn( new Dn(service.getSchemaManager(), partitionDn ) );
+        partition.initialize();
         service.addPartition( partition );
 
         return partition;
@@ -92,7 +108,7 @@ public class Runner {
     private void addIndex( Partition partition, String... attrs )
     {
         // Index some attributes on the apache partition
-        Set indexedAttributes = new HashSet();
+        Set<Index<?,?,String>> indexedAttributes = new HashSet<Index<?, ?, String>>();
 
         for ( String attribute : attrs )
         {
@@ -161,6 +177,8 @@ public class Runner {
     {
         // Initialize the LDAP service
         service = new DefaultDirectoryService();
+//        service = new ApacheDsService();
+//        service.start(new InstanceLayout( workDir ));
         service.setInstanceLayout( new InstanceLayout( workDir ) );
 
         CacheService cacheService = new CacheService();
@@ -185,64 +203,85 @@ public class Runner {
         // Note: this system partition might be removed from trunk
         service.setSystemPartition( systemPartition );
 
-        // Disable the ChangeLog system
         service.getChangeLog().setEnabled(false);
         service.setDenormalizeOpAttrsEnabled(true);
 
-        // Now we can create as many partitions as we need
-        // Create some new partitions named 'foo', 'bar' and 'apache'.
-//        Partition fooPartition = addPartition( "foo", "dc=department,dc=example,dc=com", service.getDnFactory() );
-//        Partition barPartition = addPartition( "bar", "dc=bar,dc=com", service.getDnFactory() );
-        // TODO Read root dn from config
-        Partition iamPartition = addPartition( "iam", "dc=iam,dc=aws,dc=org", service.getDnFactory() );
+        SingleFileLdifPartition configPartition = new SingleFileLdifPartition(service.getSchemaManager());
+        configPartition.setId("config");
+        configPartition.setPartitionPath(new File(service.getInstanceLayout().getConfDirectory(), "config.ldif").toURI());
+        configPartition.setSuffixDn(new Dn(service.getSchemaManager(), "ou=config"));
+        configPartition.setSchemaManager(service.getSchemaManager());
+        configPartition.setCacheService(cacheService);
+
+        configPartition.initialize();
+        service.addPartition(configPartition);
+
+        readIAMProperties();
+
+        String rootDN = AWSIAMAuthenticator.getConfig().rootDN;
+        Partition iamPartition = addPartition("iam", rootDN, service.getDnFactory());
 
         // Index some attributes on the apache partition
-        addIndex( iamPartition, "objectClass", "ou", "uid" );
-
-        // TODO Load iam.ldif, enable_nis.ldif, auth.ldif, modify.ldif
+        addIndex( iamPartition, "objectClass", "ou", "uid", "gidNumber", "uidNumber", "cn" );
 
         // And start the service
         service.startup();
-        // We are all done !
+
+        loadLdif("iam.ldif");
+        loadLdif("enable_nis.ldif");
+        loadLdif("auth.ldif");
+        if (!exists("cn=config,ads-authenticatorid=awsiamauthenticator,ou=authenticators,ads-interceptorId=authenticationInterceptor,ou=interceptors,ads-directoryServiceId=default,ou=config")) {
+            Entry entryIAM = service.newEntry( service.getDnFactory().create("cn=config,ads-authenticatorid=awsiamauthenticator,ou=authenticators,ads-interceptorId=authenticationInterceptor,ou=interceptors,ads-directoryServiceId=default,ou=config") );
+            entryIAM.put("objectClass", "iamauthenticatorconfig", "top");
+            entryIAM.put(SchemaConstants.ENTRY_CSN_AT, service.getCSN().toString());
+            entryIAM.put(SchemaConstants.ENTRY_UUID_AT, UUID.randomUUID().toString());
+            entryIAM.put("cn", "config");
+            entryIAM.put("idGenerator", "1000");
+            service.getAdminSession().add(entryIAM);
+        }
+        // TODO IAM partition is not visible
+/*
+        Dn dnIAM = new Dn(service.getSchemaManager(), rootDN);
+        if (!service.getAdminSession().exists(dnIAM)) {
+            Entry entryIAM = service.newEntry( dnIAM );
+            entryIAM.add("objectClass", "top", "domain", "extensibleObject");
+            entryIAM.add("dc", "iam");
+            service.getAdminSession().add( entryIAM );
+        }
+*/
     }
 
-    private void popuplateWithData(Partition fooPartition, Partition barPartition, Partition apachePartition) throws LdapException {
-        // Inject the context entry for dc=foo,dc=com partition if it does not already exist
-        try
-        {
-            service.getAdminSession().lookup( fooPartition.getSuffixDn() );
-        }
-        catch ( LdapException lnnfe )
-        {
-            Dn dnFoo = new Dn( "dc=department,dc=example,dc=com" );
-            Entry entryFoo = service.newEntry( dnFoo );
-            entryFoo.add( "objectClass", "top", "domain", "extensibleObject" );
-            entryFoo.add( "dc", "department" );
-            service.getAdminSession().add( entryFoo );
-        }
+    private boolean exists(String s) throws LdapException {
+        return service.getAdminSession().exists(s);
+    }
 
-        // Inject the context entry for dc=bar,dc=com partition
-        try
-        {
-            service.getAdminSession().lookup( barPartition.getSuffixDn() );
+    private void loadLdif(String s) throws LdapException {
+        if (getClass().getClassLoader().getResourceAsStream(s) == null) {
+            s = new File("E:\\WS\\ApacheDS_AWSIAM\\dist\\apacheds\\" + s).getAbsolutePath();
         }
-        catch ( LdapException lnnfe )
-        {
-            Dn dnBar = new Dn( "dc=bar,dc=com" );
-            Entry entryBar = service.newEntry( dnBar );
-            entryBar.add( "objectClass", "top", "domain", "extensibleObject" );
-            entryBar.add( "dc", "bar" );
-            service.getAdminSession().add( entryBar );
-        }
+        LdifFileLoader loader = new LdifFileLoader(service.getAdminSession(), s);
+        loader.execute();
+    }
 
-        // Inject the context entry for dc=Apache,dc=Org partition
-        if ( !service.getAdminSession().exists( apachePartition.getSuffixDn() ) )
-        {
-            Dn dnApache = new Dn( "dc=Apache,dc=Org" );
-            Entry entryApache = service.newEntry( dnApache );
-            entryApache.add( "objectClass", "top", "domain", "extensibleObject" );
-            entryApache.add( "dc", "Apache" );
-            service.getAdminSession().add( entryApache );
+    private void readIAMProperties() {
+        String propsPath = System.getProperty("iamLdapPropsPath", "/etc/iam_ldap.conf");
+        File propsFile = new File(propsPath);
+        // Read the config file if exists
+        if (propsFile.exists()) {
+            try {
+                Properties props = new Properties();
+                props.load(new FileInputStream(propsFile));
+                AWSIAMAuthenticator.Config config = new AWSIAMAuthenticator.Config();
+                if (props.containsKey("pollPeriod")) config.pollPeriod = Integer.parseInt(props.getProperty("pollPeriod"));
+                if (props.containsKey("rootDN")) config.rootDN = props.getProperty("rootDN");
+                AWSIAMAuthenticator.setConfig(config);
+            } catch (IOException e) {
+                IAM_LOG.error("Unable to read IAM LDAP config file");
+                AWSIAMAuthenticator.setConfig(new AWSIAMAuthenticator.Config());
+            }
+        } else {
+            // Populate from defaults
+            AWSIAMAuthenticator.setConfig(new AWSIAMAuthenticator.Config());
         }
     }
 
@@ -254,13 +293,29 @@ public class Runner {
     public void startServer() throws Exception
     {
         server = new LdapServer();
-        int serverPort = 10389;
+
         server.setTransports( new TcpTransport( serverPort ) );
         server.setDirectoryService( service );
 
         server.start();
     }
-    public static void main(String[] args) {
+    public static void main(String[] args) throws Exception {
+        System.setProperty("default.controls", "org.apache.directory.api.ldap.codec.controls.cascade.CascadeFactory,org.apache.directory.api.ldap.codec.controls.manageDsaIT.ManageDsaITFactory,org.apache.directory.api.ldap.codec.controls.search.entryChange.EntryChangeFactory,org.apache.directory.api.ldap.codec.controls.search.pagedSearch.PagedResultsFactory,org.apache.directory.api.ldap.codec.controls.search.persistentSearch.PersistentSearchFactory,org.apache.directory.api.ldap.codec.controls.search.subentries.SubentriesFactory");
+        System.setProperty("extra.controls", "org.apache.directory.api.ldap.extras.controls.ppolicy_impl.PasswordPolicyFactory,org.apache.directory.api.ldap.extras.controls.syncrepl_impl.SyncDoneValueFactory,org.apache.directory.api.ldap.extras.controls.syncrepl_impl.SyncInfoValueFactory,org.apache.directory.api.ldap.extras.controls.syncrepl_impl.SyncRequestValueFactory,org.apache.directory.api.ldap.extras.controls.syncrepl_impl.SyncStateValueFactory");
+        System.setProperty("default.extendedOperation.requests", "org.apache.directory.api.ldap.extras.extended.ads_impl.cancel.CancelFactory,org.apache.directory.api.ldap.extras.extended.ads_impl.certGeneration.CertGenerationFactory,org.apache.directory.api.ldap.extras.extended.ads_impl.gracefulShutdown.GracefulShutdownFactory,org.apache.directory.api.ldap.extras.extended.ads_impl.storedProcedure.StoredProcedureFactory");
+        System.setProperty("default.extendedOperation.responses", "org.apache.directory.api.ldap.extras.extended.ads_impl.gracefulDisconnect.GracefulDisconnectFactory");
 
+        Runner runner = new Runner();
+        runner.initDirectoryService(getDirectoryPath());
+        runner.startServer();
+        System.out.println("Server started on " + serverPort);
+    }
+
+    private static File getDirectoryPath() {
+        if (!new File("/var").exists()) {
+            return new File(System.getProperty("java.io.tmpdir"), "iam_ldap");
+        } else {
+            return new File("/var", "iam_ldap");
+        }
     }
 }

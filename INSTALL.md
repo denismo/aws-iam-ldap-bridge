@@ -148,7 +148,7 @@ here is the list of steps you need to perform:
 
         ldapsearch -D "uid=admin,ou=system" -w secret -x -b "dc=example,dc=com" "(objectclass=posixaccount)"
 
-    You should see your IAM accounts and if your LDAP is configured you should now be able to login using one of them.
+    You should see your IAM accounts and if your PAM/LDAP is configured you should now be able to login using one of them.
 
 After that you are strongly advised to follow the security hardening steps described in *Security notes*. Ideally, never expose this instance to the open Internet, only use it within a VPC in a private subnet.
 

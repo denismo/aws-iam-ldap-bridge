@@ -21,8 +21,10 @@ package com.denismo.aws.iam;
 import com.amazonaws.auth.AWSCredentials;
 import com.amazonaws.auth.AWSCredentialsProvider;
 import com.amazonaws.auth.BasicAWSCredentials;
+import com.amazonaws.auth.DefaultAWSCredentialsProviderChain;
 import com.amazonaws.services.identitymanagement.AmazonIdentityManagementClient;
 import com.amazonaws.services.identitymanagement.model.*;
+import com.denismo.apacheds.auth.AWSIAMAuthenticator;
 import org.apache.directory.api.ldap.model.constants.SchemaConstants;
 import org.apache.directory.api.ldap.model.cursor.CursorException;
 import org.apache.directory.api.ldap.model.entry.*;
@@ -60,8 +62,6 @@ public class LDAPIAMPoller {
     public static final String ID_GENERATOR = "idGenerator";
 
     private AWSCredentialsProvider credentials;
-//    private UIDAllocator userIDAllocator;
-//    private UIDAllocator groupIDAllocator;
     private DirectoryService directory;
     private int pollPeriod = 600;
     private String groupsDN;
@@ -69,8 +69,6 @@ public class LDAPIAMPoller {
     private String rootDN;
     private String GROUP_FMT;
     private String USER_FMT;
-    private String accessKey;
-    private String secretKey;
     private String ROLE_FMT;
     private String rolesDN;
     private boolean firstRun = true;
@@ -80,19 +78,7 @@ public class LDAPIAMPoller {
         this.directory = directoryService;
 
         readConfig();
-        credentials = new AWSCredentialsProvider() {
-            @Override
-            public void refresh() {
-
-            }
-
-            @Override
-            public AWSCredentials getCredentials() {
-                return new BasicAWSCredentials(accessKey, secretKey);
-            }
-        };
-//        userIDAllocator = new UIDAllocator(credentials, "Users");
-//        groupIDAllocator = new UIDAllocator(credentials, "Groups");
+        credentials = new DefaultAWSCredentialsProviderChain();
         LOG.info("IAMPoller created");
     }
 
@@ -102,15 +88,10 @@ public class LDAPIAMPoller {
                     directory.getDnFactory().create("cn=configEntry,ads-authenticatorid=awsiamauthenticator,ou=authenticators,ads-interceptorId=authenticationInterceptor,ou=interceptors,ads-directoryServiceId=default,ou=configEntry"),
                     SchemaConstants.ALL_USER_ATTRIBUTES, SchemaConstants.ALL_OPERATIONAL_ATTRIBUTES);
             configEntry = directory.getPartitionNexus().lookup(lookupContext);
-            if (configEntry.get("accessKey") != null) {
-                accessKey = configEntry.get("accessKey").getString();
-            }
-            if (configEntry.get("secretKey") != null) {
-                secretKey = configEntry.get("secretKey").getString();
-            }
-            if (configEntry.get("rootDN") != null) {
-                rootDN = configEntry.get("rootDN").getString();
-            }
+            AWSIAMAuthenticator.Config config = AWSIAMAuthenticator.getConfig();
+            rootDN = config.rootDN;
+            pollPeriod = config.pollPeriod;
+
             groupsDN = "ou=groups," + rootDN;
             usersDN = "ou=users," + rootDN;
             rolesDN = "ou=roles," + rootDN;
@@ -118,10 +99,6 @@ public class LDAPIAMPoller {
             USER_FMT = "uid=%s," + usersDN;
             ROLE_FMT = "uid=%s,ou=roles," + rootDN;
             ensureDNs();
-
-            if (configEntry.get("pollPeriod") != null) {
-                pollPeriod = Integer.parseInt(configEntry.get("pollPeriod").getString());
-            }
         } catch (Throwable e) {
             LOG.error("Exception reading config for LDAPIAMPoller", e);
         }
@@ -183,7 +160,7 @@ public class LDAPIAMPoller {
     private void pollIAM() {
         LOG.info("*** Updating accounts from IAM");
         try {
-            clearDNs();
+//            clearDNs();
             populateGroupsFromIAM();
             populateUsersFromIAM();
 //            populateRolesFromIAM();
@@ -237,7 +214,7 @@ public class LDAPIAMPoller {
         Entry existingRole = getExistingRole(role);
         if (existingRole != null) {
             directory.getAdminSession().modify(existingRole.getDn(),
-                    new DefaultModification(ModificationOperation.REPLACE_ATTRIBUTE, "accessKey", accessKey),
+                    new DefaultModification(ModificationOperation.REPLACE_ATTRIBUTE, "accessKey", role.getRoleId()),
                     new DefaultModification(ModificationOperation.REPLACE_ATTRIBUTE, "gidNumber", roleGroup.get("gidNumber").getString())
             );
             if (!roleGroup.contains("memberUid", role.getRoleName())) {
@@ -392,7 +369,6 @@ public class LDAPIAMPoller {
 
     private String allocateGroupID(String groupName) {
         return allocateID();
-//        return groupIDAllocator.allocateUID(groupName);
     }
 
     private String allocateID() {
@@ -533,7 +509,6 @@ public class LDAPIAMPoller {
     }
 
     private String allocateUserID(String name) {
-//        return userIDAllocator.allocateUID(name);
         return allocateID();
     }
 

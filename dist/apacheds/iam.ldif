@@ -124,11 +124,7 @@ objectclass: top
 m-oid: 0.9.2342.19200300.101.1.4
 m-name: iamauthenticatorconfig
 m-supObjectClass: top
-m-must: accessKey
-m-must: secretKey
-m-must: rootDN
 m-must: cn
-m-may: pollPeriod
 m-must: idGenerator
 
 dn: m-oid=0.9.2342.19200300.101.1.10, ou=objectclasses, cn=iam, ou=schema

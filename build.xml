@@ -44,6 +44,7 @@
     <target name="package" depends="compile">
         <jar jarfile="${basedir}/apacheds_awsiam.jar">
             <fileset dir="${outdir}" includes="**/*.class"  />
+            <fileset dir="${distdir}" includes="*.ldif" />
         </jar>
     </target>
 

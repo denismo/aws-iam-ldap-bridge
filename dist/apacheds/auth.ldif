@@ -11,16 +11,3 @@ ads-authenticatorclass: com.denismo.apacheds.auth.AWSIAMAuthenticator
 ads-authenticatorid: awsiamauthenticator
 ads-enabled: TRUE
 
-dn: cn=config,ads-authenticatorid=awsiamauthenticator,ou=authenticators,ads-
- interceptorId=authenticationInterceptor,ou=interceptors,ads-directoryServic
- eId=default,ou=config
-objectclass: iamauthenticatorconfig
-objectclass: top
-accesskey: <AWS access key>
-cn: config
-rootdn: dc=example,dc=com
-pollPeriod: 600
-secretkey: <AWS secret access key>
-idGenerator: 1000
-
-
