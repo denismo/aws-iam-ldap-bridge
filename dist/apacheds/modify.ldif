@@ -1,13 +1,3 @@
-dn:  cn=config,ads-authenticatorid=awsiamauthenticator,ou=authenticators,ads-interceptorId=authenticationInterceptor,ou=interceptors,ads-directoryServiceId=default,ou=config
-changetype: modify
-replace: accessKey
-accessKey: <AWS access key>
-
-dn:  cn=config,ads-authenticatorid=awsiamauthenticator,ou=authenticators,ads-interceptorId=authenticationInterceptor,ou=interceptors,ads-directoryServiceId=default,ou=config
-changetype: modify
-replace: secretKey
-secretKey: <AWS secret key>
-
 dn: ads-directoryServiceId=default,ou=config
 changetype: modify
 replace: ads-dspasswordhidden

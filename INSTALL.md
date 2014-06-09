@@ -39,12 +39,25 @@ to fetch the users and groups, and authenticate with AWS IAM on their behalf.
 
 1. Extract the contents of the archive
 
-1. Edit the modify.ldif and change the values for `accessKey` and `secretKey`.
+1. Configure AWS access credentials
+
+    The application uses default credentials provider so all typical means of specifying the credentials will work (e.g. environment variable).
+    For details, see the AWS SDK documentation [Providing Credentials](http://docs.aws.amazon.com/AWSSdkDocsJava/latest/DeveloperGuide/credentials.html).
 
     The specified user must have the following permissions:
 
-    - Read/Write access to DynamoDB (you can restrict read/write to specific DynamoDB tables with names `IAMUsers`, `IAMGroups`, `IAMRoles`)
-    - Read access to IAM List* and Get* operations.
+       - Read access to IAM List* and Get* operations.
+
+1. (Optionally) Customize some properties via the config file
+
+    The config file is either specified as the iamLdapPropertiesPath Java property, or is at /etc/iam_ldap.conf. The file has Java property files format.
+
+    The following properties can be defined:
+
+    - pollPeriod:  frequency with which the server will refresh the credentials from IAM. Default is 600ms.
+    - rootDN: the root DN for the authentication information. An new partition will be created at this location. Default is "dc=iam,dc=aws,dc=org".
+
+    If no config file is specified, the defaults are used.
 
 1. Start the ApacheDS server (assuming Linux):
 
@@ -52,13 +65,9 @@ to fetch the users and groups, and authenticate with AWS IAM on their behalf.
         bash apacheds.sh &
         sleep 10
 
-1. Apply the AWS configuration
+1. After that the server should be filled with the users/groups.
 
-        ldapmodify -H ldap://localhost:10389 -D uid=admin,ou=system -w secret -x -f modify.ldif
-
-1. Restart the ApacheDS server
-
-    After that the server should be filled with the users/groups. You can verify that by executing the following:
+    You can verify that by executing the following (replace dc=example,dc=com with your root DN):
 
         ldapsearch -H ldap://localhost:10389 -D "uid=admin,ou=system" -x -w secret -b "dc=example,dc=com" "(objectclass=posixaccount)"
 
@@ -110,7 +119,7 @@ You may want to change the following defaults:
     This entry stores the AWS Access Key and Secret Key for the authenticator, and rootDN stores all the information about accounts. You need to prevent any logged in users
     from modifying the account's keys and group information (only admin should be allowed to do that).
 
-Configuring an existing ApacheDS LDAP server
+Configuring an existing ApacheDS LDAP server (Obsolete)
 ============================================
 At the moment, the plugin requires a custom version of ApacheDS so manual configuration is unlikely. However, in a rare case when you want to reconfigure the provided custom instance,
 here is the list of steps you need to perform:

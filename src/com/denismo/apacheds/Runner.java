@@ -26,7 +26,6 @@ import java.util.jar.JarFile;
 import java.util.zip.ZipFile;
 
 import com.denismo.apacheds.auth.AWSIAMAuthenticator;
-import com.sun.java.util.jar.pack.UnpackerImpl;
 import org.apache.directory.api.ldap.model.constants.SchemaConstants;
 import org.apache.directory.api.ldap.model.entry.Entry;
 import org.apache.directory.api.ldap.model.exception.LdapException;
@@ -264,7 +263,7 @@ public class Runner {
     }
 
     private void readIAMProperties() {
-        String propsPath = System.getProperty("iamLdapPropsPath", "/etc/iam_ldap.conf");
+        String propsPath = System.getProperty("iamLdapPropertiesPath", "/etc/iam_ldap.conf");
         File propsFile = new File(propsPath);
         // Read the config file if exists
         if (propsFile.exists()) {

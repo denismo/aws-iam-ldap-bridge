@@ -20,23 +20,38 @@ package com.denismo.apacheds.auth;
 
 import com.denismo.aws.iam.IAMPasswordValidator;
 import com.denismo.aws.iam.LDAPIAMPoller;
+import org.apache.directory.api.ldap.model.exception.LdapInvalidDnException;
+import org.apache.directory.api.ldap.model.name.Dn;
+import org.apache.directory.server.core.api.DirectoryService;
+import org.apache.directory.server.core.api.DnFactory;
 import org.apache.directory.server.core.api.LdapPrincipal;
 import org.apache.directory.server.core.api.entry.ClonedServerEntry;
+import org.apache.directory.server.core.api.event.NotificationCriteria;
 import org.apache.directory.server.core.api.interceptor.context.BindOperationContext;
 import org.apache.directory.server.core.api.interceptor.context.LookupOperationContext;
+import org.apache.directory.server.core.api.partition.Partition;
 import org.apache.directory.server.core.authn.AbstractAuthenticator;
 import org.apache.directory.server.core.authn.SimpleAuthenticator;
+import org.apache.directory.server.core.partition.impl.btree.jdbm.JdbmIndex;
+import org.apache.directory.server.core.partition.impl.btree.jdbm.JdbmPartition;
 import org.apache.directory.server.i18n.I18n;
 import org.apache.directory.api.ldap.model.constants.AuthenticationLevel;
 import org.apache.directory.api.ldap.model.constants.SchemaConstants;
 import org.apache.directory.api.ldap.model.entry.Entry;
 import org.apache.directory.api.ldap.model.exception.LdapAuthenticationException;
 import org.apache.directory.api.ldap.model.exception.LdapException;
+import org.apache.directory.server.xdbm.Index;
 import org.apache.mina.core.session.IoSession;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
 import java.net.SocketAddress;
+import java.util.HashSet;
+import java.util.Properties;
+import java.util.Set;
 
 /**
  * User: Denis Mikhalkin
@@ -78,12 +93,38 @@ public class AWSIAMAuthenticator extends AbstractAuthenticator {
         if (getDirectoryService() != null) {
             try {
                 delegatedAuth.init(getDirectoryService());
+
+                readIAMProperties();
+
                 poller = new LDAPIAMPoller(getDirectoryService());
                 poller.start();
-            } catch (LdapException e) {
-                LOG.error("Exception initializing delegated SimpleAuthenticator", e);
+            } catch (Exception e) {
+                LOG.error("Exception initializing AWSIAMAuthenticator", e);
                 disabled=true;
             }
+        }
+    }
+
+
+    private void readIAMProperties() {
+        String propsPath = System.getProperty("iamLdapPropertiesPath", "/etc/iam_ldap.conf");
+        File propsFile = new File(propsPath);
+        // Read the config file if exists
+        if (propsFile.exists()) {
+            try {
+                Properties props = new Properties();
+                props.load(new FileInputStream(propsFile));
+                AWSIAMAuthenticator.Config config = new AWSIAMAuthenticator.Config();
+                if (props.containsKey("pollPeriod")) config.pollPeriod = Integer.parseInt(props.getProperty("pollPeriod"));
+                if (props.containsKey("rootDN")) config.rootDN = props.getProperty("rootDN");
+                AWSIAMAuthenticator.setConfig(config);
+            } catch (IOException e) {
+                LOG.error("Unable to read IAM LDAP config file");
+                AWSIAMAuthenticator.setConfig(new AWSIAMAuthenticator.Config());
+            }
+        } else {
+            // Populate from defaults
+            AWSIAMAuthenticator.setConfig(new AWSIAMAuthenticator.Config());
         }
     }
 
