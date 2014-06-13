@@ -18,6 +18,7 @@
 
 package com.denismo.aws.iam;
 
+import com.amazonaws.AmazonClientException;
 import com.amazonaws.auth.AWSCredentials;
 import com.amazonaws.auth.AWSCredentialsProvider;
 import com.amazonaws.auth.BasicAWSCredentials;
@@ -39,16 +40,23 @@ import org.apache.directory.api.ldap.model.schema.normalizers.ConcreteNameCompon
 import org.apache.directory.api.ldap.model.schema.normalizers.NameComponentNormalizer;
 import org.apache.directory.server.core.api.DirectoryService;
 import org.apache.directory.api.ldap.model.exception.LdapException;
+import org.apache.directory.server.core.api.DnFactory;
 import org.apache.directory.server.core.api.filtering.EntryFilteringCursor;
 import org.apache.directory.server.core.api.interceptor.context.*;
 import org.apache.directory.server.core.api.normalization.FilterNormalizingVisitor;
+import org.apache.directory.server.core.api.partition.Partition;
+import org.apache.directory.server.core.partition.impl.btree.jdbm.JdbmIndex;
+import org.apache.directory.server.core.partition.impl.btree.jdbm.JdbmPartition;
+import org.apache.directory.server.xdbm.Index;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.File;
 import java.io.IOException;
 import java.text.ParseException;
 import java.util.*;
 import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -73,19 +81,105 @@ public class LDAPIAMPoller {
     private String rolesDN;
     private boolean firstRun = true;
     private Entry configEntry;
+    private ScheduledFuture<?> schedule;
 
     public LDAPIAMPoller(DirectoryService directoryService) throws LdapException {
         this.directory = directoryService;
 
-        readConfig();
         credentials = new DefaultAWSCredentialsProviderChain();
+        try {
+            credentials.getCredentials(); // throws
+        } catch (AmazonClientException ex) {
+            LOG.error("AWS credentials error", ex);
+            throw new LdapException("Unable to initialze AWS poller - cannot retrieve valid credentials");
+        }
         LOG.info("IAMPoller created");
+    }
+
+    private void createStructure() throws Exception {
+        if (!firstRun) return;
+        firstRun = false;
+        try {
+            String rootDN = AWSIAMAuthenticator.getConfig().rootDN;
+            Dn dnIAM = directory.getDnFactory().create(rootDN);
+            if (!exists(dnIAM)) {
+                Partition iamPartition = addPartition("iam", rootDN, directory.getDnFactory());
+
+                // Index some attributes on the apache partition
+                addIndex(iamPartition, "objectClass", "ou", "uid", "gidNumber", "uidNumber", "cn");
+
+                Entry entryIAM = new DefaultEntry(directory.getSchemaManager(), dnIAM, "objectClass: top", "objectClass: domain", "dc: iam",
+                        "entryCsn: " + directory.getCSN(), SchemaConstants.ENTRY_UUID_AT + ": " + UUID.randomUUID().toString());
+                iamPartition.add(new AddOperationContext(null, entryIAM));
+
+//                Entry entryIAM = directory.newEntry(dnIAM);
+//                entryIAM.add("objectClass", "top", "domain");
+//                entryIAM.add("dc", "iam"); // TODO What if rootDN does not have dc=iam?
+//                directory.getAdminSession().add(entryIAM);
+            }
+            readConfig();
+        } catch (Exception e) {
+            LOG.error("Exception preparing structure", e);
+            schedule.cancel(false);
+            throw new RuntimeException("Unable to initialize poller");
+        }
+    }
+
+    private boolean exists(Dn dnIAM) {
+        try {
+            return directory.getAdminSession().exists(dnIAM);
+        } catch (LdapException e) {
+            return false;
+        }
+    }
+
+    /**
+     * Add a new partition to the server
+     *
+     * @param partitionId The partition Id
+     * @param partitionDn The partition DN
+     * @param dnFactory the DN factory
+     * @return The newly added partition
+     * @throws Exception If the partition can't be added
+     */
+    private Partition addPartition( String partitionId, String partitionDn, DnFactory dnFactory ) throws Exception
+    {
+        DirectoryService service = directory;
+        // Create a new partition with the given partition id
+        JdbmPartition partition = new JdbmPartition(service.getSchemaManager()/*, dnFactory*/);
+        partition.setId( partitionId );
+        partition.setPartitionPath(new File(service.getInstanceLayout().getPartitionsDirectory(), partitionId).toURI());
+        partition.setSuffixDn(dnFactory.create(partitionDn));
+        partition.initialize();
+        service.addPartition( partition );
+
+        return partition;
+    }
+
+
+    /**
+     * Add a new set of index on the given attributes
+     *
+     * @param partition The partition on which we want to add index
+     * @param attrs The list of attributes to index
+     */
+    private void addIndex( Partition partition, String... attrs )
+    {
+        // Index some attributes on the apache partition
+        Set<Index<?,?,String>> indexedAttributes = new HashSet<Index<?, ?, String>>();
+
+        for ( String attribute : attrs )
+        {
+            indexedAttributes.add( new JdbmIndex( attribute, false ) );
+        }
+
+        ( ( JdbmPartition ) partition ).setIndexedAttributes(indexedAttributes);
     }
 
     private void readConfig() {
         try {
             LookupOperationContext lookupContext = new LookupOperationContext( directory.getAdminSession(),
-                    directory.getDnFactory().create("cn=configEntry,ads-authenticatorid=awsiamauthenticator,ou=authenticators,ads-interceptorId=authenticationInterceptor,ou=interceptors,ads-directoryServiceId=default,ou=configEntry"),
+                    directory.getDnFactory().create("cn=config,ads-authenticatorid=awsiamauthenticator,ou=authenticators,ads-interceptorId=authenticationInterceptor,ou=interceptors,ads-directoryServiceId=default,ou=config"),
                     SchemaConstants.ALL_USER_ATTRIBUTES, SchemaConstants.ALL_OPERATIONAL_ATTRIBUTES);
             configEntry = directory.getPartitionNexus().lookup(lookupContext);
             AWSIAMAuthenticator.Config config = AWSIAMAuthenticator.getConfig();
@@ -158,16 +252,19 @@ public class LDAPIAMPoller {
     }
 
     private void pollIAM() {
+        if (!directory.isStarted()) return;
+
         LOG.info("*** Updating accounts from IAM");
         try {
 //            clearDNs();
+            createStructure();
             populateGroupsFromIAM();
             populateUsersFromIAM();
 //            populateRolesFromIAM();
+            LOG.info("*** IAM account update finished");
         } catch (Throwable e) {
             LOG.error("Exception polling", e);
         }
-        LOG.info("*** IAM account update finished");
     }
 
     private void clearDNs() throws LdapException, IOException, ParseException, CursorException {
@@ -520,6 +617,6 @@ public class LDAPIAMPoller {
                 pollIAM();
             }
         };
-        Executors.newScheduledThreadPool(1).scheduleAtFixedRate(poll, 10, pollPeriod, TimeUnit.SECONDS);
+        schedule = Executors.newScheduledThreadPool(1).scheduleAtFixedRate(poll, 10, pollPeriod, TimeUnit.SECONDS);
     }
 }

@@ -27,6 +27,7 @@ import java.util.zip.ZipFile;
 
 import com.denismo.apacheds.auth.AWSIAMAuthenticator;
 import org.apache.directory.api.ldap.model.constants.SchemaConstants;
+import org.apache.directory.api.ldap.model.entry.DefaultEntry;
 import org.apache.directory.api.ldap.model.entry.Entry;
 import org.apache.directory.api.ldap.model.exception.LdapException;
 import org.apache.directory.api.ldap.model.exception.LdapInvalidDnException;
@@ -46,6 +47,7 @@ import org.apache.directory.server.core.api.CacheService;
 import org.apache.directory.server.core.api.DirectoryService;
 import org.apache.directory.server.core.api.DnFactory;
 import org.apache.directory.server.core.api.InstanceLayout;
+import org.apache.directory.server.core.api.interceptor.context.AddOperationContext;
 import org.apache.directory.server.core.api.interceptor.context.HasEntryOperationContext;
 import org.apache.directory.server.core.api.partition.Partition;
 import org.apache.directory.server.core.api.schema.SchemaPartition;
@@ -243,10 +245,13 @@ public class Runner {
         }
         Dn dnIAM = service.getDnFactory().create(rootDN);
         if (!service.getAdminSession().exists(dnIAM)) {
-            Entry entryIAM = service.newEntry( dnIAM );
-            entryIAM.add("objectClass", "top", "domain");
-            entryIAM.add("dc", "iam");
-            service.getAdminSession().add( entryIAM );
+            Entry entryIAM = new DefaultEntry(service.getSchemaManager(), dnIAM, "objectClass: top", "objectClass: domain", "dc: iam",
+                    "entryCsn: " + service.getCSN(), SchemaConstants.ENTRY_UUID_AT + ": " + UUID.randomUUID().toString());
+            iamPartition.add(new AddOperationContext(null, entryIAM));
+//            Entry entryIAM = service.newEntry( dnIAM );
+//            entryIAM.add("objectClass", "top", "domain");
+//            entryIAM.add("dc", "iam");
+//            service.getAdminSession().add( entryIAM );
         }
     }
 
