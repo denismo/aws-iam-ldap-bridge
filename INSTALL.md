@@ -48,7 +48,7 @@ to fetch the users and groups, and authenticate with AWS IAM on their behalf.
 
        - Read access to IAM List* and Get* operations.
 
-1. (Optionally) Customize some properties via the config file
+1. (Optional) Customize some properties via the config file
 
     The config file is either specified as the iamLdapPropertiesPath Java property, or is at /etc/iam_ldap.conf. The file has Java property files format.
 
@@ -57,7 +57,7 @@ to fetch the users and groups, and authenticate with AWS IAM on their behalf.
     - pollPeriod:  frequency with which the server will refresh the credentials from IAM. Default is 600ms.
     - rootDN: the root DN for the authentication information. An new partition will be created at this location. Default is "dc=iam,dc=aws,dc=org".
 
-    If no config file is specified, the defaults are used.
+    If no config file is specified, the defaults above are used.
 
 1. Start the ApacheDS server (assuming Linux):
 
