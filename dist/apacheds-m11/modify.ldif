@@ -1,0 +1,9 @@
+dn: ads-directoryServiceId=default,ou=config
+changetype: modify
+replace: ads-dspasswordhidden
+ads-dspasswordhidden: TRUE
+
+dn: ads-directoryServiceId=default,ou=config
+changetype: modify
+replace: ads-dsallowanonymousaccess
+ads-dsallowanonymousaccess: TRUE
