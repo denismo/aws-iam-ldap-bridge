@@ -48,6 +48,7 @@ import org.apache.directory.server.core.api.partition.Partition;
 import org.apache.directory.server.core.partition.impl.btree.jdbm.JdbmIndex;
 import org.apache.directory.server.core.partition.impl.btree.jdbm.JdbmPartition;
 import org.apache.directory.server.xdbm.Index;
+import org.apache.directory.server.xdbm.Store;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -82,6 +83,7 @@ public class LDAPIAMPoller {
     private boolean firstRun = true;
     private Entry configEntry;
     private ScheduledFuture<?> schedule;
+    private Partition iamPartition;
 
     public LDAPIAMPoller(DirectoryService directoryService) throws LdapException {
         this.directory = directoryService;
@@ -103,19 +105,19 @@ public class LDAPIAMPoller {
             String rootDN = AWSIAMAuthenticator.getConfig().rootDN;
             Dn dnIAM = directory.getDnFactory().create(rootDN);
             if (!exists(dnIAM)) {
-                Partition iamPartition = addPartition("iam", rootDN, directory.getDnFactory());
+                iamPartition = addPartition("iam", rootDN, directory.getDnFactory());
 
                 // Index some attributes on the apache partition
                 addIndex(iamPartition, "objectClass", "ou", "uid", "gidNumber", "uidNumber", "cn");
 
-                Entry entryIAM = new DefaultEntry(directory.getSchemaManager(), dnIAM, "objectClass: top", "objectClass: domain", "dc: iam",
-                        "entryCsn: " + directory.getCSN(), SchemaConstants.ENTRY_UUID_AT + ": " + UUID.randomUUID().toString());
-                iamPartition.add(new AddOperationContext(null, entryIAM));
-
-//                Entry entryIAM = directory.newEntry(dnIAM);
-//                entryIAM.add("objectClass", "top", "domain");
-//                entryIAM.add("dc", "iam"); // TODO What if rootDN does not have dc=iam?
-//                directory.getAdminSession().add(entryIAM);
+                if (!exists(dnIAM)) {
+                    Rdn rdn = dnIAM.getRdn(0);
+                    Entry entryIAM = new DefaultEntry(directory.getSchemaManager(), dnIAM, "objectClass: top", "objectClass: domain",
+                            "entryCsn: " + directory.getCSN(), SchemaConstants.ENTRY_UUID_AT + ": " + UUID.randomUUID().toString(),
+                            rdn.getType() + ": " + rdn.getValue());
+//                    iamPartition.add(new AddOperationContext(null, entryIAM));
+                    add(entryIAM);
+                }
             }
             readConfig();
         } catch (Exception e) {
@@ -144,9 +146,13 @@ public class LDAPIAMPoller {
      */
     private Partition addPartition( String partitionId, String partitionDn, DnFactory dnFactory ) throws Exception
     {
+        for (Partition part : directory.getPartitions()) {
+            if (part.getId().equals(partitionId)) return part;
+        }
+
         DirectoryService service = directory;
         // Create a new partition with the given partition id
-        JdbmPartition partition = new JdbmPartition(service.getSchemaManager()/*, dnFactory*/);
+        JdbmPartition partition = new JdbmPartition(service.getSchemaManager(), dnFactory);
         partition.setId( partitionId );
         partition.setPartitionPath(new File(service.getInstanceLayout().getPartitionsDirectory(), partitionId).toURI());
         partition.setSuffixDn(dnFactory.create(partitionDn));
@@ -166,7 +172,7 @@ public class LDAPIAMPoller {
     private void addIndex( Partition partition, String... attrs )
     {
         // Index some attributes on the apache partition
-        Set<Index<?,?,String>> indexedAttributes = new HashSet<Index<?, ?, String>>();
+        Set<Index<?,String>> indexedAttributes = new HashSet<Index<?,String>>();
 
         for ( String attribute : attrs )
         {
@@ -178,10 +184,22 @@ public class LDAPIAMPoller {
 
     private void readConfig() {
         try {
-            LookupOperationContext lookupContext = new LookupOperationContext( directory.getAdminSession(),
-                    directory.getDnFactory().create("cn=config,ads-authenticatorid=awsiamauthenticator,ou=authenticators,ads-interceptorId=authenticationInterceptor,ou=interceptors,ads-directoryServiceId=default,ou=config"),
-                    SchemaConstants.ALL_USER_ATTRIBUTES, SchemaConstants.ALL_OPERATIONAL_ATTRIBUTES);
-            configEntry = directory.getPartitionNexus().lookup(lookupContext);
+            Dn configDn = directory.getDnFactory().create("cn=config,ads-authenticatorid=awsiamauthenticator,ou=authenticators,ads-interceptorId=authenticationInterceptor,ou=interceptors,ads-directoryServiceId=default,ou=config");
+            if (!exists(configDn)) {
+                configEntry = directory.newEntry(configDn);
+                configEntry.put("objectClass", "iamauthenticatorconfig", "top");
+                configEntry.put(SchemaConstants.ENTRY_CSN_AT, directory.getCSN().toString());
+                configEntry.put(SchemaConstants.ENTRY_UUID_AT, UUID.randomUUID().toString());
+                configEntry.put("cn", "config");
+                configEntry.put("idGenerator", "1000");
+                directory.getAdminSession().add(configEntry);
+            } else {
+                LookupOperationContext lookupContext = new LookupOperationContext( directory.getAdminSession(),
+                        configDn,
+                        SchemaConstants.ALL_USER_ATTRIBUTES, SchemaConstants.ALL_OPERATIONAL_ATTRIBUTES);
+                configEntry = directory.getPartitionNexus().lookup(lookupContext);
+            }
+
             AWSIAMAuthenticator.Config config = AWSIAMAuthenticator.getConfig();
             rootDN = config.rootDN;
             pollPeriod = config.pollPeriod;
@@ -260,6 +278,11 @@ public class LDAPIAMPoller {
             createStructure();
             populateGroupsFromIAM();
             populateUsersFromIAM();
+            directory.sync();
+
+            if (!exists(directory.getDnFactory().create("ou=blah," + groupsDN)))
+                createEntry("ou=blah," + groupsDN, "organizationalUnit");
+
 //            populateRolesFromIAM();
             LOG.info("*** IAM account update finished");
         } catch (Throwable e) {
@@ -302,7 +325,7 @@ public class LDAPIAMPoller {
         }
     }
 
-    private Entry getOrCreateRoleGroup(Role role) throws LdapException {
+    private Entry getOrCreateRoleGroup(Role role) throws Exception {
         Group group = new Group(role.getPath(), role.getRoleName(), role.getRoleId(), role.getArn(), role.getCreateDate());
         return addGroup(group);
     }
@@ -426,9 +449,11 @@ public class LDAPIAMPoller {
         }
     }
 
-    private Entry addGroup(Group iamGroup) throws LdapException {
+    private Entry addGroup(Group iamGroup) throws Exception {
+        LOG.info("Adding group " + iamGroup.getGroupName());
         Entry existingGroup = getExistingGroup(iamGroup);
         if (existingGroup != null) {
+            LOG.info("Group exists: " + iamGroup.getGroupName());
             return existingGroup;
         }
 
@@ -443,7 +468,8 @@ public class LDAPIAMPoller {
         return group;
     }
 
-    private Entry getExistingGroup(Group iamGroup) throws LdapException {
+    private Entry getExistingGroup(Group iamGroup) throws Exception {
+        LOG.info("Entry id: " + ((Store)iamPartition).getEntryId(directory.getDnFactory().create(String.format(GROUP_FMT, iamGroup.getGroupName()))));
 
         LookupOperationContext lookupContext = new LookupOperationContext( directory.getAdminSession(),
                 directory.getDnFactory().create(String.format(GROUP_FMT, iamGroup.getGroupName())),
@@ -462,6 +488,7 @@ public class LDAPIAMPoller {
 
     private void add(Entry entry) throws LdapException {
         directory.getPartitionNexus().add(new AddOperationContext(directory.getAdminSession(), entry));
+//        iamPartition.add(new AddOperationContext(null, entry));
     }
 
     private String allocateGroupID(String groupName) {

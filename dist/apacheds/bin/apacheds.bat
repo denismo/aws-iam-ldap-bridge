@@ -16,11 +16,6 @@ REM  KIND, either express or implied.  See the License for the
 REM  specific language governing permissions and limitations
 REM  under the License.
 
-if not exist ..\instances\default (
-    cd ..\instances
-    unzip -q default.zip
-    cd ..\bin
-)
 
 REM Getting the instance name from the first argument
 set INSTANCE_NAME=%1
@@ -38,13 +33,9 @@ REM Dynamically build the classpath
 set ADS_CLASSPATH=
 for %%i in (..\lib\*.jar) do call cpappend.bat %%i
 
-set DEF_CTRLS="-Ddefault.controls=org.apache.directory.api.ldap.codec.controls.cascade.CascadeFactory,org.apache.directory.api.ldap.codec.controls.manageDsaIT.ManageDsaITFactory,org.apache.directory.api.ldap.codec.controls.search.entryChange.EntryChangeFactory,org.apache.directory.api.ldap.codec.controls.search.pagedSearch.PagedResultsFactory,org.apache.directory.api.ldap.codec.controls.search.persistentSearch.PersistentSearchFactory,org.apache.directory.api.ldap.codec.controls.search.subentries.SubentriesFactory"
+set ADS_CONTROLS="-Dapacheds.controls="
 
-set EXT_CTRLS="-Dextra.controls=org.apache.directory.api.ldap.extras.controls.ppolicy_impl.PasswordPolicyFactory,org.apache.directory.api.ldap.extras.controls.syncrepl_impl.SyncDoneValueFactory,org.apache.directory.api.ldap.extras.controls.syncrepl_impl.SyncInfoValueFactory,org.apache.directory.api.ldap.extras.controls.syncrepl_impl.SyncRequestValueFactory,org.apache.directory.api.ldap.extras.controls.syncrepl_impl.SyncStateValueFactory"
-
-set DEF_EXT_OP_REQ="-Ddefault.extendedOperation.requests=org.apache.directory.api.ldap.extras.extended.ads_impl.cancel.CancelFactory,org.apache.directory.api.ldap.extras.extended.ads_impl.certGeneration.CertGenerationFactory,org.apache.directory.api.ldap.extras.extended.ads_impl.gracefulShutdown.GracefulShutdownFactory,org.apache.directory.api.ldap.extras.extended.ads_impl.storedProcedure.StoredProcedureFactory"
-
-set DEF_EXT_OP_RESP="-Ddefault.extendedOperation.responses=org.apache.directory.api.ldap.extras.extended.ads_impl.gracefulDisconnect.GracefulDisconnectFactory"
+set ADS_EXTENDED_OPERATIONS="-Dapacheds.extendedOperations="
 
 REM Launching ApacheDS
-java %DEF_CTRLS% %EXT_CTRLS% %DEF_EXT_OP_REQ% %DEF_EXT_OP_RESP% -Dlog4j.configuration="file:../instances/%INSTANCE_NAME%/conf/log4j.properties" -Dapacheds.log.dir=../instances/%INSTANCE_NAME%/log -cp %ADS_CLASSPATH% org.apache.directory.server.UberjarMain ../instances/%INSTANCE_NAME%
+java %ADS_CONTROLS% %ADS_EXTENDED_OPERATIONS%  -Daws.accessKeyId="AKIAIN4CJRIAX3TBOO4Q" -Daws.secretKey="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" -Dlog4j.configuration="file:../instances/%INSTANCE_NAME%/conf/log4j.properties" -Dapacheds.log.dir=../instances/%INSTANCE_NAME%/log -cp %ADS_CLASSPATH% org.apache.directory.server.UberjarMain ../instances/%INSTANCE_NAME%

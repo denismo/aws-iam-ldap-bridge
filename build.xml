@@ -46,6 +46,7 @@
             <fileset dir="${outdir}" includes="**/*.class"  />
             <fileset dir="${distdir}" includes="*.ldif" />
         </jar>
+        <copy todir="${targetdir}/lib" file="${basedir}/apacheds_awsiam.jar" />
     </target>
 
     <target name="dist" depends="package">

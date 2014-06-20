@@ -102,6 +102,8 @@ public class AWSIAMAuthenticator extends AbstractAuthenticator {
                 LOG.error("Exception initializing AWSIAMAuthenticator", e);
                 disabled=true;
             }
+        } else {
+            LOG.warn("doInit without directory service");
         }
     }
 

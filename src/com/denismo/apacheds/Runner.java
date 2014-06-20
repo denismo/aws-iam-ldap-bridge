@@ -92,7 +92,7 @@ public class Runner {
     private Partition addPartition( String partitionId, String partitionDn, DnFactory dnFactory ) throws Exception
     {
         // Create a new partition with the given partition id
-        JdbmPartition partition = new JdbmPartition(service.getSchemaManager()/*, dnFactory*/);
+        JdbmPartition partition = new JdbmPartition(service.getSchemaManager(), dnFactory);
         partition.setId( partitionId );
         partition.setPartitionPath( new File( service.getInstanceLayout().getPartitionsDirectory(), partitionId ).toURI() );
         partition.setSuffixDn( new Dn(service.getSchemaManager(), partitionDn ) );
@@ -112,7 +112,7 @@ public class Runner {
     private void addIndex( Partition partition, String... attrs )
     {
         // Index some attributes on the apache partition
-        Set<Index<?,?,String>> indexedAttributes = new HashSet<Index<?, ?, String>>();
+        Set<Index<?,String>> indexedAttributes = new HashSet<Index<?,String>>();
 
         for ( String attribute : attrs )
         {
@@ -162,7 +162,7 @@ public class Runner {
         service.setSchemaManager( schemaManager );
 
         // Init the LdifPartition with schema
-        LdifPartition schemaLdifPartition = new LdifPartition( schemaManager/*, service.getDnFactory() */);
+        LdifPartition schemaLdifPartition = new LdifPartition( schemaManager, service.getDnFactory() );
         schemaLdifPartition.setPartitionPath( schemaPartitionDirectory.toURI() );
 
         // The schema partition
@@ -197,7 +197,7 @@ public class Runner {
         // this is a MANDATORY partition
         // DO NOT add this via addPartition() method, trunk code complains about duplicate partition
         // while initializing
-        JdbmPartition systemPartition = new JdbmPartition(service.getSchemaManager()/*, service.getDnFactory()*/);
+        JdbmPartition systemPartition = new JdbmPartition(service.getSchemaManager(), service.getDnFactory());
         systemPartition.setId( "system" );
         systemPartition.setPartitionPath( new File( service.getInstanceLayout().getPartitionsDirectory(), systemPartition.getId() ).toURI() );
         systemPartition.setSuffixDn( new Dn( ServerDNConstants.SYSTEM_DN ) );
@@ -210,7 +210,7 @@ public class Runner {
         service.getChangeLog().setEnabled(false);
         service.setDenormalizeOpAttrsEnabled(true);
 
-        SingleFileLdifPartition configPartition = new SingleFileLdifPartition(service.getSchemaManager());
+        SingleFileLdifPartition configPartition = new SingleFileLdifPartition(service.getSchemaManager(), service.getDnFactory());
         configPartition.setId("config");
         configPartition.setPartitionPath(new File(service.getInstanceLayout().getConfDirectory(), "config.ldif").toURI());
         configPartition.setSuffixDn(new Dn(service.getSchemaManager(), "ou=config"));
