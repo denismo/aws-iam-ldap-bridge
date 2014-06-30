@@ -25,6 +25,7 @@ import com.amazonaws.auth.BasicAWSCredentials;
 import com.amazonaws.auth.DefaultAWSCredentialsProviderChain;
 import com.amazonaws.services.identitymanagement.AmazonIdentityManagementClient;
 import com.amazonaws.services.identitymanagement.model.*;
+import com.denismo.apacheds.Runner;
 import com.denismo.apacheds.auth.AWSIAMAuthenticator;
 import org.apache.directory.api.ldap.model.constants.SchemaConstants;
 import org.apache.directory.api.ldap.model.cursor.CursorException;
@@ -38,6 +39,7 @@ import org.apache.directory.api.ldap.model.name.Dn;
 import org.apache.directory.api.ldap.model.name.Rdn;
 import org.apache.directory.api.ldap.model.schema.normalizers.ConcreteNameComponentNormalizer;
 import org.apache.directory.api.ldap.model.schema.normalizers.NameComponentNormalizer;
+import org.apache.directory.server.constants.ApacheSchemaConstants;
 import org.apache.directory.server.core.api.DirectoryService;
 import org.apache.directory.api.ldap.model.exception.LdapException;
 import org.apache.directory.server.core.api.DnFactory;
@@ -45,9 +47,11 @@ import org.apache.directory.server.core.api.filtering.EntryFilteringCursor;
 import org.apache.directory.server.core.api.interceptor.context.*;
 import org.apache.directory.server.core.api.normalization.FilterNormalizingVisitor;
 import org.apache.directory.server.core.api.partition.Partition;
+import org.apache.directory.server.core.partition.impl.btree.AbstractBTreePartition;
 import org.apache.directory.server.core.partition.impl.btree.jdbm.JdbmIndex;
 import org.apache.directory.server.core.partition.impl.btree.jdbm.JdbmPartition;
 import org.apache.directory.server.xdbm.Index;
+import org.apache.directory.server.xdbm.ParentIdAndRdn;
 import org.apache.directory.server.xdbm.Store;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -68,7 +72,7 @@ import java.util.concurrent.TimeUnit;
 public class LDAPIAMPoller {
     private static final Logger LOG = LoggerFactory.getLogger(LDAPIAMPoller.class);
     private static final Object ID_LOCK = new Object();
-    public static final String ID_GENERATOR = "idGenerator";
+    public static final String ID_GENERATOR = "ads-dsSyncPeriodMillis";
 
     private AWSCredentialsProvider credentials;
     private DirectoryService directory;
@@ -84,6 +88,8 @@ public class LDAPIAMPoller {
     private Entry configEntry;
     private ScheduledFuture<?> schedule;
     private Partition iamPartition;
+    private Runner runner;
+    private boolean dumpedIndex;
 
     public LDAPIAMPoller(DirectoryService directoryService) throws LdapException {
         this.directory = directoryService;
@@ -95,6 +101,7 @@ public class LDAPIAMPoller {
             LOG.error("AWS credentials error", ex);
             throw new LdapException("Unable to initialze AWS poller - cannot retrieve valid credentials");
         }
+        runner = new Runner(directory);
         LOG.info("IAMPoller created");
     }
 
@@ -102,23 +109,9 @@ public class LDAPIAMPoller {
         if (!firstRun) return;
         firstRun = false;
         try {
-            String rootDN = AWSIAMAuthenticator.getConfig().rootDN;
-            Dn dnIAM = directory.getDnFactory().create(rootDN);
-            if (!exists(dnIAM)) {
-                iamPartition = addPartition("iam", rootDN, directory.getDnFactory());
-
-                // Index some attributes on the apache partition
-                addIndex(iamPartition, "objectClass", "ou", "uid", "gidNumber", "uidNumber", "cn");
-
-                if (!exists(dnIAM)) {
-                    Rdn rdn = dnIAM.getRdn(0);
-                    Entry entryIAM = new DefaultEntry(directory.getSchemaManager(), dnIAM, "objectClass: top", "objectClass: domain",
-                            "entryCsn: " + directory.getCSN(), SchemaConstants.ENTRY_UUID_AT + ": " + UUID.randomUUID().toString(),
-                            rdn.getType() + ": " + rdn.getValue());
-//                    iamPartition.add(new AddOperationContext(null, entryIAM));
-                    add(entryIAM);
-                }
-            }
+            runner.createStructure();
+            runner.loadLdif("test.ldif");
+            runner.loadLdif("blah.ldif");
             readConfig();
         } catch (Exception e) {
             LOG.error("Exception preparing structure", e);
@@ -127,13 +120,54 @@ public class LDAPIAMPoller {
         }
     }
 
-    private boolean exists(Dn dnIAM) {
-        try {
-            return directory.getAdminSession().exists(dnIAM);
-        } catch (LdapException e) {
-            return false;
+    public final String getEntryId( Dn dn ) throws LdapException
+    {
+        Dn suffixDn = directory.getDnFactory().create("dc=iam,dc=aws,dc=org");
+        Index<ParentIdAndRdn, String> rdnIdx = ((AbstractBTreePartition)iamPartition).getRdnIndex();
+        try
+        {
+            if ( Dn.isNullOrEmpty( dn ) )
+            {
+                return Partition.ROOT_ID;
+            }
+
+            ParentIdAndRdn suffixKey = new ParentIdAndRdn( Partition.ROOT_ID, suffixDn.getRdns() );
+//            LOG.info("Suffix key: " + suffixKey);
+
+            // Check into the Rdn index, starting with the partition Suffix
+            try
+            {
+                String currentId = rdnIdx.forwardLookup( suffixKey );
+//                LOG.info("Root index ID: " + currentId);
+
+                for ( int i = dn.size() - suffixDn.size(); i > 0; i-- )
+                {
+                    Rdn rdn = dn.getRdn( i - 1 );
+                    ParentIdAndRdn currentRdn = new ParentIdAndRdn( currentId, rdn );
+                    currentId = rdnIdx.forwardLookup( currentRdn );
+
+                    if ( currentId == null )
+                    {
+//                        LOG.info("Breaking at " + i + ", currentRdn: " + currentRdn);
+                        break;
+                    } else {
+//                        LOG.info("Found " + currentId + " at " + currentRdn);
+                    }
+                }
+
+                return currentId;
+            }
+            finally
+            {
+            }
+        }
+        catch ( Exception e )
+        {
+            throw new LdapException( e.getMessage(), e );
         }
     }
+
+
 
     /**
      * Add a new partition to the server
@@ -185,13 +219,13 @@ public class LDAPIAMPoller {
     private void readConfig() {
         try {
             Dn configDn = directory.getDnFactory().create("cn=config,ads-authenticatorid=awsiamauthenticator,ou=authenticators,ads-interceptorId=authenticationInterceptor,ou=interceptors,ads-directoryServiceId=default,ou=config");
-            if (!exists(configDn)) {
+            if (!runner.exists(configDn)) {
                 configEntry = directory.newEntry(configDn);
                 configEntry.put("objectClass", "iamauthenticatorconfig", "top");
                 configEntry.put(SchemaConstants.ENTRY_CSN_AT, directory.getCSN().toString());
                 configEntry.put(SchemaConstants.ENTRY_UUID_AT, UUID.randomUUID().toString());
                 configEntry.put("cn", "config");
-                configEntry.put("idGenerator", "1000");
+                configEntry.put(ID_GENERATOR, "1000");
                 directory.getAdminSession().add(configEntry);
             } else {
                 LookupOperationContext lookupContext = new LookupOperationContext( directory.getAdminSession(),
@@ -278,10 +312,9 @@ public class LDAPIAMPoller {
             createStructure();
             populateGroupsFromIAM();
             populateUsersFromIAM();
-            directory.sync();
 
-            if (!exists(directory.getDnFactory().create("ou=blah," + groupsDN)))
-                createEntry("ou=blah," + groupsDN, "organizationalUnit");
+//            if (!runner.exists(directory.getDnFactory().create("ou=blah," + groupsDN)))
+//                createEntry("ou=blah," + groupsDN, "organizationalUnit");
 
 //            populateRolesFromIAM();
             LOG.info("*** IAM account update finished");
@@ -414,12 +447,13 @@ public class LDAPIAMPoller {
     private void removeDeletedGroups(Set<String> groupNames) {
         Collection<Entry> allGroups = getAllEntries(groupsDN, "iamgroup");
         for (Entry group : allGroups) {
-            if (!groupNames.contains(group.get(SchemaConstants.CN_AT).toString())) {
-                try {
+            try {
+                if (!groupNames.contains(group.get(SchemaConstants.CN_AT).getString())) {
+                    LOG.debug("Deleting non-existant group " + group.get(SchemaConstants.CN_AT).getString());
                     directory.getAdminSession().delete(group.getDn());
-                } catch (LdapException e) {
-                    LOG.error("Unable to delete group " + group.getDn());
                 }
+            } catch (LdapException e) {
+                LOG.error("Unable to delete group " + group.getDn());
             }
         }
     }
@@ -457,22 +491,28 @@ public class LDAPIAMPoller {
             return existingGroup;
         }
 
+//        if (!dumpedIndex) runner.dumpIndex(runner.getPartition(directory, "iam"));
         String gid = allocateGroupID(iamGroup.getArn());
-        Entry group = new DefaultEntry(directory.getSchemaManager(), directory.getDnFactory().create(String.format(GROUP_FMT, iamGroup.getGroupName())));
-        group.put(SchemaConstants.OBJECT_CLASS_AT, "posixGroup", "iamgroup");
+        Dn groupDn = directory.getDnFactory().create(String.format(GROUP_FMT, iamGroup.getGroupName()));
+        LOG.info("New group dn: " + groupDn);
+        Entry group = new DefaultEntry(directory.getSchemaManager(), groupDn);
+        group.put(SchemaConstants.OBJECT_CLASS_AT, "posixGroup", "iamgroup", "top");
         group.put("gidNumber", gid);
         group.put(SchemaConstants.ENTRY_CSN_AT, directory.getCSN().toString());
         group.put(SchemaConstants.CN_AT, iamGroup.getGroupName());
         group.put(SchemaConstants.ENTRY_UUID_AT, UUID.randomUUID().toString());
         add(group);
+//        if (!dumpedIndex) runner.dumpIndex(runner.getPartition(directory, "iam"));
+//        dumpedIndex = true;
         return group;
     }
-
     private Entry getExistingGroup(Group iamGroup) throws Exception {
-        LOG.info("Entry id: " + ((Store)iamPartition).getEntryId(directory.getDnFactory().create(String.format(GROUP_FMT, iamGroup.getGroupName()))));
+        Dn dn = directory.getDnFactory().create(String.format(GROUP_FMT, iamGroup.getGroupName()));
+//        LOG.info("Entry id: " + ((Store)iamPartition).getEntryId(dn));
+//        LOG.info("Entry id (internal): " + getEntryId(dn));
 
         LookupOperationContext lookupContext = new LookupOperationContext( directory.getAdminSession(),
-                directory.getDnFactory().create(String.format(GROUP_FMT, iamGroup.getGroupName())),
+                dn,
                 SchemaConstants.ALL_USER_ATTRIBUTES, SchemaConstants.ALL_OPERATIONAL_ATTRIBUTES);
 
         try {
@@ -487,7 +527,10 @@ public class LDAPIAMPoller {
     }
 
     private void add(Entry entry) throws LdapException {
-        directory.getPartitionNexus().add(new AddOperationContext(directory.getAdminSession(), entry));
+//        LOG.info("Adding entry " + entry);
+        directory.getAdminSession().add(entry);
+        runner.checkErrors();
+//        directory.getPartitionNexus().add(new AddOperationContext(directory.getAdminSession(), entry));
 //        iamPartition.add(new AddOperationContext(null, entry));
     }
 
@@ -519,6 +562,7 @@ public class LDAPIAMPoller {
         try {
             ListUsersResult res = client.listUsers();
             Set<String> allUsers = new HashSet<String>();
+            boolean firstUser = true;
             while (true) {
                 for (User user : res.getUsers()) {
                     try {
@@ -528,10 +572,12 @@ public class LDAPIAMPoller {
                             LOG.warn("Unable to determine primary group for " + user.getUserName());
                             continue;
                         }
+//                        if (firstUser) runner.dumpIndex(runner.getPartition(directory, "iam"));
+//                        firstUser = false;
                         Entry groupEntry = getExistingGroup(primaryGroup);
                         if (groupEntry == null) {
                             LOG.warn("Unable to retrieve matching group entry for group " + primaryGroup.getGroupName() + " user " + user.getUserName());
-                            continue;
+//                            continue;
                         }
                         addUser(user, getUserAccessKey(client, user), groupEntry);
                         allUsers.add(user.getUserName());
@@ -555,12 +601,13 @@ public class LDAPIAMPoller {
     private void removeDeletedUsers(Set<String> userNames) {
         Collection<Entry> allUsers = getAllEntries(usersDN, "iamaccount");
         for (Entry user : allUsers) {
-            if (!userNames.contains(user.get(SchemaConstants.CN_AT).toString())) {
-                try {
+            try {
+                if (!userNames.contains(user.get(SchemaConstants.CN_AT).getString())) {
+                    LOG.debug("Deleting non-existant user " + user.get(SchemaConstants.CN_AT));
                     directory.getAdminSession().delete(user.getDn());
-                } catch (LdapException e) {
-                    LOG.error("Unable to delete user " + user.getDn());
                 }
+            } catch (LdapException e) {
+                LOG.error("Unable to delete user " + user.getDn());
             }
         }
     }
@@ -601,7 +648,11 @@ public class LDAPIAMPoller {
         ent.put(SchemaConstants.ENTRY_UUID_AT, UUID.randomUUID().toString());
         ent.put("cn", user.getUserName());
         ent.put("uidNumber", allocateUserID(user.getArn()));
-        ent.put("gidNumber", group.get("gidNumber").getString());
+        if (group != null) {
+            ent.put("gidNumber", group.get("gidNumber").getString());
+        } else {
+            ent.put("gidNumber", "1001");
+        }
         ent.put("shadowLastChange", "10877");
         ent.put("shadowExpire", "-1");
         ent.put("shadowInactive", "-1");
@@ -613,7 +664,7 @@ public class LDAPIAMPoller {
         ent.put("homedirectory", "/home/" + user.getUserName());
         add(ent);
 
-        directory.getAdminSession().modify(group.getDn(),
+        if (group != null) directory.getAdminSession().modify(group.getDn(),
                 new DefaultModification(ModificationOperation.ADD_ATTRIBUTE, "memberUid", user.getUserName()));
     }
 

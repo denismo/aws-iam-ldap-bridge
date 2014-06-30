@@ -32,7 +32,7 @@
     <target name="compile">
          <delete dir="${outdir}" failonerror="false" />
          <mkdir dir="${outdir}" />
-         <javac srcdir="${basedir}/src" destdir="${basedir}/ivyout">
+         <javac srcdir="${basedir}/src" destdir="${basedir}/ivyout" debug="true" debuglevel="lines,vars,source">
              <classpath>
                  <fileset dir="${ivy.lib.dir}">
                      <include name="*.jar"/>

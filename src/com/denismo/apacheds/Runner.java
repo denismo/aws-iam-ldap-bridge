@@ -27,12 +27,15 @@ import java.util.zip.ZipFile;
 
 import com.denismo.apacheds.auth.AWSIAMAuthenticator;
 import org.apache.directory.api.ldap.model.constants.SchemaConstants;
+import org.apache.directory.api.ldap.model.cursor.Cursor;
+import org.apache.directory.api.ldap.model.cursor.CursorException;
 import org.apache.directory.api.ldap.model.entry.DefaultEntry;
 import org.apache.directory.api.ldap.model.entry.Entry;
 import org.apache.directory.api.ldap.model.exception.LdapException;
 import org.apache.directory.api.ldap.model.exception.LdapInvalidDnException;
 import org.apache.directory.api.ldap.model.ldif.LdifReader;
 import org.apache.directory.api.ldap.model.name.Dn;
+import org.apache.directory.api.ldap.model.name.Rdn;
 import org.apache.directory.api.ldap.model.schema.SchemaManager;
 import org.apache.directory.api.ldap.model.schema.registries.SchemaLoader;
 import org.apache.directory.api.ldap.schemaextractor.SchemaLdifExtractor;
@@ -51,6 +54,7 @@ import org.apache.directory.server.core.api.interceptor.context.AddOperationCont
 import org.apache.directory.server.core.api.interceptor.context.HasEntryOperationContext;
 import org.apache.directory.server.core.api.partition.Partition;
 import org.apache.directory.server.core.api.schema.SchemaPartition;
+import org.apache.directory.server.core.partition.impl.btree.AbstractBTreePartition;
 import org.apache.directory.server.core.partition.impl.btree.jdbm.JdbmIndex;
 import org.apache.directory.server.core.partition.impl.btree.jdbm.JdbmPartition;
 import org.apache.directory.server.core.partition.ldif.LdifPartition;
@@ -60,6 +64,9 @@ import org.apache.directory.server.ldap.LdapServer;
 import org.apache.directory.server.protocol.shared.store.LdifFileLoader;
 import org.apache.directory.server.protocol.shared.transport.TcpTransport;
 import org.apache.directory.server.xdbm.Index;
+import org.apache.directory.server.xdbm.IndexEntry;
+import org.apache.directory.server.xdbm.ParentIdAndRdn;
+import org.apache.directory.server.xdbm.Store;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -80,6 +87,11 @@ public class Runner {
     private LdapServer server;
 
 
+    public Runner(DirectoryService service) {
+        this.service = service;
+    }
+    public Runner() {}
+
     /**
      * Add a new partition to the server
      *
@@ -93,9 +105,9 @@ public class Runner {
     {
         // Create a new partition with the given partition id
         JdbmPartition partition = new JdbmPartition(service.getSchemaManager(), dnFactory);
-        partition.setId( partitionId );
-        partition.setPartitionPath( new File( service.getInstanceLayout().getPartitionsDirectory(), partitionId ).toURI() );
-        partition.setSuffixDn( new Dn(service.getSchemaManager(), partitionDn ) );
+        partition.setId(partitionId);
+        partition.setPartitionPath(new File(service.getInstanceLayout().getPartitionsDirectory(), partitionId).toURI());
+        partition.setSuffixDn(new Dn(service.getSchemaManager(), partitionDn));
         partition.initialize();
         service.addPartition( partition );
 
@@ -258,13 +270,50 @@ public class Runner {
     private boolean exists(String s) throws LdapException {
         return service.getAdminSession().exists(s);
     }
+    public boolean exists(Dn dnIAM) {
+        try {
+            return service.getAdminSession().exists(dnIAM);
+        } catch (LdapException e) {
+            return false;
+        }
+    }
 
-    private void loadLdif(String s) throws LdapException {
+    public void loadLdif(String s) throws LdapException {
         if (getClass().getClassLoader().getResourceAsStream(s) == null) {
             s = new File("E:\\WS\\ApacheDS_AWSIAM\\dist\\apacheds\\" + s).getAbsolutePath();
         }
         LdifFileLoader loader = new LdifFileLoader(service.getAdminSession(), s);
         loader.execute();
+    }
+
+    public void createStructure() throws Exception {
+        String rootDN = AWSIAMAuthenticator.getConfig().rootDN;
+        Dn dnIAM = service.getDnFactory().create(rootDN);
+        if (!exists(dnIAM)) {
+            IAM_LOG.info("Creating partition " + rootDN);
+            addPartition("iam", rootDN, service.getDnFactory());
+
+            // Index some attributes on the apache partition
+//                addIndex(iamPartition, "objectClass", "ou", "uid", "gidNumber", "uidNumber", "cn");
+
+            if (!exists(dnIAM)) {
+                IAM_LOG.info("Creating root node " + rootDN);
+                Rdn rdn = dnIAM.getRdn(0);
+                Entry entryIAM = new DefaultEntry(service.getSchemaManager(), dnIAM, "objectClass: top", "objectClass: domain",
+                        "entryCsn: " + service.getCSN(), SchemaConstants.ENTRY_UUID_AT + ": " + UUID.randomUUID().toString(),
+                        rdn.getType() + ": " + rdn.getValue());
+//                    iamPartition.add(new AddOperationContext(null, entryIAM));
+                service.getAdminSession().add(entryIAM);
+                checkErrors();
+            }
+        }
+        service.sync();
+    }
+
+    public void checkErrors() {
+        if (!service.getSchemaManager().getErrors().isEmpty()) {
+            throw new RuntimeException("Errors: " + service.getSchemaManager().getErrors());
+        }
     }
 
     private void readIAMProperties() {
@@ -286,6 +335,22 @@ public class Runner {
         } else {
             // Populate from defaults
             AWSIAMAuthenticator.setConfig(new AWSIAMAuthenticator.Config());
+        }
+    }
+
+    public void dumpIndex(Partition part) {
+        Index<ParentIdAndRdn, String> rdnIdx = ((AbstractBTreePartition)part).getRdnIndex();
+        IAM_LOG.debug("Dumping index " + rdnIdx);
+        try {
+            Cursor<IndexEntry<ParentIdAndRdn, String>> cursor = rdnIdx.forwardCursor();
+            while (cursor.next()) {
+                IndexEntry<ParentIdAndRdn, String> entry = cursor.get();
+                IAM_LOG.debug("  " + entry.getKey());
+            }
+        } catch (LdapException e) {
+            e.printStackTrace();
+        } catch (CursorException e) {
+            e.printStackTrace();
         }
     }
 
@@ -322,5 +387,13 @@ public class Runner {
         } else {
             return new File("/var", "iam_ldap");
         }
+    }
+
+    public Partition getPartition(DirectoryService directory, String id) throws LdapException {
+        Set<? extends Partition> partitions = directory.getPartitions();
+        for (Partition part : partitions) {
+            if (part.getId().equalsIgnoreCase(id)) return part;
+        }
+        throw new LdapException("No partition with the ID " + id);
     }
 }
