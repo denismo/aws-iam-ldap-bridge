@@ -28,7 +28,7 @@ you are NOT advised to use it for any security sensitive application. Feel free 
 Quick start
 ===========
 
-Download the binary package from [AWS_IAM_ApacheDS](https://s3-ap-southeast-2.amazonaws.com/aws-iam-apacheds/apacheds.zip).
+Download the binary package from [AWS_IAM_ApacheDS](https://s3-ap-southeast-2.amazonaws.com/aws-iam-apacheds/apacheds-0.1.zip).
 Alternatively, you can read [build instruction](BUILD.md) on how to build the same binary package.
 This package contains a self-contained installation of ApacheDS 2.0.0-M17 with AWS IAM bridge. It is designed to be used
 straight away on any Linux system which has Java 6 without any manual configuration. For example, it can be embedded into
