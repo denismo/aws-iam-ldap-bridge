@@ -39,7 +39,7 @@ to fetch the users and groups, and authenticate with AWS IAM on their behalf.
 
 1. Extract the contents of the archive
 
-1. Configure AWS access credentials
+2. Configure AWS access credentials
 
     The application uses default credentials provider so all typical means of specifying the credentials will work (e.g. environment variable).
     For details, see the AWS SDK documentation [Providing Credentials](http://docs.aws.amazon.com/AWSSdkDocsJava/latest/DeveloperGuide/credentials.html).
@@ -48,7 +48,7 @@ to fetch the users and groups, and authenticate with AWS IAM on their behalf.
 
        - Read access to IAM List* and Get* operations.
 
-1. (Optional) Customize some properties via the config file
+3. (Optional) Customize some properties via the config file
 
     The config file is either specified as the iamLdapPropertiesPath Java property, or is at /etc/iam_ldap.conf. The file has Java property files format.
 
@@ -59,13 +59,13 @@ to fetch the users and groups, and authenticate with AWS IAM on their behalf.
 
     If no config file is specified, the defaults above are used.
 
-1. Start the ApacheDS server (assuming Linux):
+4. Start the ApacheDS server (assuming Linux):
 
         cd bin
         bash apacheds.sh &
         sleep 10
 
-1. After that the server should be filled with the users/groups.
+5. After that the server should be filled with the users/groups.
 
     You can verify that by executing the following (replace dc=example,dc=com with your root DN):
 
@@ -73,7 +73,7 @@ to fetch the users and groups, and authenticate with AWS IAM on their behalf.
 
     You should get a list of your IAM accounts.
 
-1. (Optional) Configure propagation of the access credentials into user session
+6. (Optional) Configure propagation of the access credentials into user session
 
     There is an ability to propagate the AWS Access Key and Secret Key into the logged-in user session allowing that user to execute the AWS command (for example, with awscli)
     using their own credentials without the need to pre-configure them in the instance.
@@ -142,15 +142,15 @@ here is the list of steps you need to perform:
     Note that the following steps may only work on the specified default instance - there may be conflicting configuration
     in some other custom instance
     
-1. Copy the apacheds_awsiam.jar and dependent jars into the "lib" folder of the instance
+2. Copy the apacheds_awsiam.jar and dependent jars into the "lib" folder of the instance
 
-2. Starts the instance. The following assumes the instance is running on port 10389 on localhost.
+3. Starts the instance. The following assumes the instance is running on port 10389 on localhost.
 
-3. Import IAM authenticator configuration:
+4. Import IAM authenticator configuration:
 
         ldapmodify -H ldap://localhost:10389 -D uid=admin,ou=system -w secret -x -f iam.ldif
 
-7. Restart the instance
+5. Restart the instance
 
     You should not see any errors in the console. Wait 15 seconds (scan starts after 10) and then execute user's search:
 
