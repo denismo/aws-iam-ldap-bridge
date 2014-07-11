@@ -19,8 +19,8 @@ created and updated automatically. If the user does not have access key/secret k
 > *Note:* The user's AWS Secret Keys are never stored in any persistent storage or logs. Only user names and accessKeys are stored in LDAP, and
 those are filtered out of search results if `ads-dspasswordhidden` property is set.
 
-By default, the users are cached in LDAP at ou=users,dc=example,dc=com and groups as ou=groups,dc=example,dc=com. You can change
-that by modifying the rootDN in auth.ldif and importing it back into the server.
+By default, the users are cached in LDAP at ou=users,dc=iam,dc=aws,dc=org and groups as ou=groups,dc=iam,dc=aws,dc=org. You can change
+that by modifying the rootDN in the config file (see below) before starting the server.
 
 > _You should also be aware that this project is in its early stages. No formal security assessment has been done against it. Considering that,
 you are NOT advised to use it for any security sensitive application. Feel free to evaluate this project but be aware that you use it at your own risk._
@@ -30,7 +30,7 @@ Quick start
 
 Download the binary package from [AWS_IAM_ApacheDS](https://s3-ap-southeast-2.amazonaws.com/aws-iam-apacheds/apacheds.zip).
 Alternatively, you can read [build instruction](BUILD.md) on how to build the same binary package.
-This package contains a self-contained installation of ApacheDS 2.0.0-M11 with AWS IAM bridge. It is designed to be used
+This package contains a self-contained installation of ApacheDS 2.0.0-M17 with AWS IAM bridge. It is designed to be used
 straight away on any Linux system which has Java 6 without any manual configuration. For example, it can be embedded into
 an AWS AMI and used for all your servers to allow the AWS IAM authentication of Linux users.
 
@@ -54,7 +54,7 @@ to fetch the users and groups, and authenticate with AWS IAM on their behalf.
 
     The following properties can be defined:
 
-    - pollPeriod:  frequency with which the server will refresh the credentials from IAM. Default is 600ms.
+    - pollPeriod:  frequency with which the server will refresh the credentials from IAM. Default is 600 seconds.
     - rootDN: the root DN for the authentication information. An new partition will be created at this location. Default is "dc=iam,dc=aws,dc=org".
 
     If no config file is specified, the defaults above are used.
@@ -69,7 +69,7 @@ to fetch the users and groups, and authenticate with AWS IAM on their behalf.
 
     You can verify that by executing the following (replace dc=example,dc=com with your root DN):
 
-        ldapsearch -H ldap://localhost:10389 -D "uid=admin,ou=system" -x -w secret -b "dc=example,dc=com" "(objectclass=posixaccount)"
+        ldapsearch -H ldap://localhost:10389 -D "uid=admin,ou=system" -x -w secret -b "dc=iam,dc=aws,dc=org" "(objectclass=posixaccount)"
 
     You should get a list of your IAM accounts.
 
@@ -94,13 +94,26 @@ to fetch the users and groups, and authenticate with AWS IAM on their behalf.
     You would need to edit /etc/aws_iam_ldap.conf with the correct URI and base DN
 
 *Note:* it is up to you to configure the PAM LDAP or similar authentication mechanism. You can use this guide for configuration <http://wiki.debian.org/LDAP/PAM/>.
-Pick the `libnss-ldapd`/`libpam-ldapd` option as I found it to work the best with ApacheDS (on Ubuntu). You'll also need to :
+Pick the `libnss-ldapd`/`libpam-ldapd` option as I found it to work the best with ApacheDS (on Ubuntu). You'll also need to:
 
 - modify /etc/ssh/sshd_config by commenting out the line of `PasswordAuthentication no`.
 - modify /etc/pam.d/common-session by adding this line somewhere close to the end: `session     required      pam_mkhomedir.so skel=/etc/skel umask=0022`
 
 After successful configuration of LDAP and NSLCD you should be able to see the users and groups using `getent passwd` and `getent group`
 If that works, you should now be able to login using the username of one of your IAM accounts, and using the secret key as the password.
+
+Config file
+===========
+
+The config file is either specified as the iamLdapPropertiesPath Java property, or is at /etc/iam_ldap.conf. The file has Java property files format.
+
+The following properties can be defined:
+
+- pollPeriod:  frequency with which the server will refresh the credentials from IAM. Default is 600 seconds.
+- rootDN: the root DN for the authentication information. An new partition will be created at this location, and then "ou=users" and "ou=groups". 
+    Default is "dc=iam,dc=aws,dc=org".
+
+If no config file is specified, the defaults above are used.
 
 Security notes
 ==============
@@ -116,7 +129,7 @@ You may want to change the following defaults:
 - Enable ACL and change the permissions for the `dn: ads-authenticatorid=awsiamauthenticator,ou=authenticators,ads-interceptorId=authenticationInterceptor,ou=interceptors,ads-directoryServiceId=default,ou=config`,
   as well as the rootDN.
 
-    This entry stores the AWS Access Key and Secret Key for the authenticator, and rootDN stores all the information about accounts. You need to prevent any logged in users
+    This entry stores the configuration for the authenticator, and rootDN stores all the information about accounts. You need to prevent any logged in users
     from modifying the account's keys and group information (only admin should be allowed to do that).
 
 Configuring an existing ApacheDS LDAP server (Obsolete)
@@ -124,38 +137,24 @@ Configuring an existing ApacheDS LDAP server (Obsolete)
 At the moment, the plugin requires a custom version of ApacheDS so manual configuration is unlikely. However, in a rare case when you want to reconfigure the provided custom instance,
 here is the list of steps you need to perform:
 
-1. Copy an existing default instance from Apache DS 2.0.0-M11 (or newer)
+1. Copy an existing default instance from Apache DS 2.0.0-M17 (or newer)
 
     Note that the following steps may only work on the specified default instance - there may be conflicting configuration
     in some other custom instance
+    
+1. Copy the apacheds_awsiam.jar and dependent jars into the "lib" folder of the instance
 
 2. Starts the instance. The following assumes the instance is running on port 10389 on localhost.
 
-3. Import IAM authenticator schema:
+3. Import IAM authenticator configuration:
 
         ldapmodify -H ldap://localhost:10389 -D uid=admin,ou=system -w secret -x -f iam.ldif
-
-4. Import NIS configuration enabler
-
-        ldapmodify -H ldap://localhost:10389 -D uid=admin,ou=system -w secret -x -f enable_nis.ldif
-
-5. Import authenticator definition
-
-    You need to modify the accessKey/secretKey in auth.ldif
-
-        ldapmodify -H ldap://localhost:10389 -D uid=admin,ou=system -w secret -x -f auth.ldif
-
-6. Import additional configuration options
-
-    You may want to modify the accessKey/secretKey in modify.ldif
-
-        ldapmodify -H ldap://localhost:10389 -D uid=admin,ou=system -w secret -x -f modify.ldif
 
 7. Restart the instance
 
     You should not see any errors in the console. Wait 15 seconds (scan starts after 10) and then execute user's search:
 
-        ldapsearch -D "uid=admin,ou=system" -w secret -x -b "dc=example,dc=com" "(objectclass=posixaccount)"
+        ldapsearch -D "uid=admin,ou=system" -w secret -x -b "dc=iam,dc=aws,dc=org" "(objectclass=posixaccount)"
 
     You should see your IAM accounts and if your PAM/LDAP is configured you should now be able to login using one of them.
 
