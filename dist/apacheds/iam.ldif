@@ -109,7 +109,7 @@ objectclass: metaAttributeType
 objectclass: metaTop
 objectclass: top
 m-oid: 0.9.2342.19200300.101.1.11
-m-name: idGenerator
+m-name: idgenerator
 m-description: The ID counter
 m-equality: integerMatch
 m-ordering: integerOrderingMatch
@@ -152,6 +152,12 @@ dn: ads-directoryServiceId=default,ou=config
 changetype: modify
 replace: ads-dsallowanonymousaccess
 ads-dsallowanonymousaccess: TRUE
+
+# Disable SimpleAuthenticator to workaround ApacheDS DIRSERVER-1987 - AWS Authenticator will delegate to it
+dn: ads-authenticatorid=simpleauthenticator,ou=authenticators,ads-interceptorId=authenticationInterceptor,ou=interceptors,ads-directoryServiceId=default,ou=config
+changetype: modify
+replace: ads-enabled
+ads-enabled: FALSE
 
 # Enable authenticator
 

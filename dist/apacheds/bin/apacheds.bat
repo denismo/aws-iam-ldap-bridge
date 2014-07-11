@@ -16,6 +16,11 @@ REM  KIND, either express or implied.  See the License for the
 REM  specific language governing permissions and limitations
 REM  under the License.
 
+if not exist ..\instances\default (
+    cd ..\instances
+    unzip -q default.zip
+    cd ..\bin
+)
 
 REM Getting the instance name from the first argument
 set INSTANCE_NAME=%1
@@ -38,4 +43,4 @@ set ADS_CONTROLS="-Dapacheds.controls="
 set ADS_EXTENDED_OPERATIONS="-Dapacheds.extendedOperations="
 
 REM Launching ApacheDS
-java %ADS_CONTROLS% %ADS_EXTENDED_OPERATIONS%  -Daws.accessKeyId="AKIAIN4CJRIAX3TBOO4Q" -Daws.secretKey="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" -Dlog4j.configuration="file:../instances/%INSTANCE_NAME%/conf/log4j.properties" -Dapacheds.log.dir=../instances/%INSTANCE_NAME%/log -cp %ADS_CLASSPATH% org.apache.directory.server.UberjarMain ../instances/%INSTANCE_NAME%
+java %ADS_CONTROLS% %ADS_EXTENDED_OPERATIONS% -Dlog4j.configuration="file:../instances/%INSTANCE_NAME%/conf/log4j.properties" -Dapacheds.log.dir=../instances/%INSTANCE_NAME%/log -cp %ADS_CLASSPATH% org.apache.directory.server.UberjarMain ../instances/%INSTANCE_NAME%

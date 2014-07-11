@@ -103,7 +103,7 @@ public class AWSIAMAuthenticator extends AbstractAuthenticator {
                 disabled=true;
             }
         } else {
-            LOG.warn("doInit without directory service");
+            LOG.info("doInit without directory service");
         }
     }
 

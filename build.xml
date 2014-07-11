@@ -59,9 +59,9 @@
         </copy>
 
         <copy file="${distdir}/iam.ldif" todir="${targetdir}" />
-        <copy file="${distdir}/modify.ldif" todir="${targetdir}" />
-        <copy file="${distdir}/enable_nis.ldif" todir="${targetdir}" />
-        <copy file="${distdir}/auth.ldif" todir="${targetdir}" />
+        <!--<copy file="${distdir}/modify.ldif" todir="${targetdir}" />-->
+        <!--<copy file="${distdir}/enable_nis.ldif" todir="${targetdir}" />-->
+        <!--<copy file="${distdir}/auth.ldif" todir="${targetdir}" />-->
 
         <copy todir="${targetdir}/lib">
             <fileset dir="${ivy.lib.dir}" includes="**/*.jar" excludes="*javadoc*,*sources*"/>
