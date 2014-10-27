@@ -1,0 +1,25 @@
+{
+  "variables": {
+      "secret_key": "{{env `Packer_Secret`}}",
+      "access_key": "{{env `Packer_Access`}}"
+  },
+  "builders": [
+    {
+      "type": "amazon-ebs",
+      "access_key": "{{user `access_key`}}",
+      "secret_key": "{{user `secret_key`}}",
+      "security_group_id": "sg-e30c108f",
+      "region": "ap-southeast-2",
+      "source_ami": "ami-63f79559",
+      "instance_type": "t2.small",
+      "ssh_username": "ec2-user",
+      "ami_name": "AWS IAM LDAP Bridge {{timestamp}}"
+    }
+  ],
+  "provisioners": [
+    {
+      "type": "shell",
+      "script": "install.sh"
+    }
+  ]
+}
