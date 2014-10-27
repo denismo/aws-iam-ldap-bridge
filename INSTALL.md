@@ -25,8 +25,29 @@ that by modifying the rootDN in the config file (see below) before starting the 
 > _You should also be aware that this project is in its early stages. No formal security assessment has been done against it. Considering that,
 you are NOT advised to use it for any security sensitive application. Feel free to evaluate this project but be aware that you use it at your own risk._
 
-Quick start
-===========
+Quick start from AMI (NEW)
+====================
+
+The software is now available as a pre-built AMI (based on Amazon Linux). You can use it to quickly launch the software without any configuration.
+ 
+1. Select to Launch instance
+1. Pre-condition: Create an EC2 Role with the Get/List permission to AWS IAM
+2. Search for public AMI with ID ami-19533f23
+3. Select at least t2.small instance type
+4. Assign the instance the above-mentioned role
+5. Assign a security group which has port 10389 opened to the LDAP clients (that's where the LDAP will be running)
+> *Note:* Never run this instance in public subnet with port 10389 open to the Internet 
+> *Note:* Make sure you read the section about [security hardening](#security-notes) 
+6. Launch the instance
+
+After a few second, verify that the LDAP works by executing the following command:
+
+    ldapsearch -H ldap://<instance IP>:10389 -D "uid=admin,ou=system" -x -w secret -b "dc=iam,dc=aws,dc=org" "(objectclass=posixaccount)"
+    
+That's it. You can then customize the instance or AMI to your configuration.
+
+Quick start from pre-build binary
+=================================
 
 Download the binary package from [AWS_IAM_ApacheDS](https://s3-ap-southeast-2.amazonaws.com/aws-iam-apacheds/apacheds-0.1.zip).
 Alternatively, you can read [build instruction](BUILD.md) on how to build the same binary package.

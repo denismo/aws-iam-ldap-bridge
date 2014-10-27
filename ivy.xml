@@ -19,7 +19,7 @@
 <ivy-module version="2.0">
     <info organisation="com.denismo" module="awsiam"/>
     <dependencies>
-        <dependency org="com.amazonaws" name="aws-java-sdk" rev="latest.integration"/>
+        <dependency org="com.amazonaws" name="aws-java-sdk" rev="1.8.11"/>
         <dependency org="org.apache.directory.server" name="apacheds-service" rev="2.0.0-M17" />
     </dependencies>
 </ivy-module>
