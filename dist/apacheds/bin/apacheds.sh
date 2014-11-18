@@ -52,10 +52,16 @@ else
     exit 1
 fi
 
+
 # For cygwin, ensure paths or in unix format before touched
 if $cygwin; then
     [ -n "$JAVA_HOME" ] && JAVA_HOME=`cygpath --unix "$JAVA_HOME"`
     [ -n "$ADS_HOME" ] && ADS_HOME=`cygpath --unix "$ADS_HOME"`
+fi
+
+# Check if there is instance archive
+if [ -f "$ADS_HOME/instances/$ADS_INSTANCE_NAME.zip" ]; then
+    unzip -d "$ADS_HOME/instances" -q "$ADS_HOME/instances/$ADS_INSTANCE_NAME.zip"
 fi
 
 RUN_JAVA="$JAVA_HOME"/bin/java
