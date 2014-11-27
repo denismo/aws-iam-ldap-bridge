@@ -12,9 +12,9 @@ It works by integrating into ApacheDS LDAP server as a plugin. The plugin period
 users and groups from AWS IAM. When Linux PAM is configured with LDAP authentication this allows for authenticating the Linux users against
 these replicated AWS IAM users which effectively as if you authenticated against AWS IAM directly.
 
-The authentication works based on using the AWS IAM user name as Linux account name, and (the first) Secret Key as password.
+The authentication works based on using the AWS IAM user name as Linux account name, and (the first) Secret Key as password or AWS IAM account password (depends on configuration).
 After login, the users will have the Linux groups corresponding to the IAM groups that were assigned to them. All accounts (users and groups) are
-created and updated automatically. If the user does not have access key/secret key the account is not created in LDAP.
+created and updated automatically. If secret key authentication is configured, and the user does not have access key/secret key the account is not created in LDAP.
 
 > *Note:* The user's AWS Secret Keys are never stored in any persistent storage or logs. Only user names and accessKeys are stored in LDAP, and
 those are filtered out of search results if `ads-dspasswordhidden` property is set.
@@ -48,12 +48,12 @@ After a few second, verify that the LDAP works by executing the following comman
     
 That's it. You can then customize the instance or AMI to your configuration.
 
-Quick start from pre-build binary
+Quick start from pre-built binary
 =================================
 
 Download the binary package from [AWS_IAM_ApacheDS](https://s3-ap-southeast-2.amazonaws.com/aws-iam-apacheds/apacheds-0.2.zip).
 Alternatively, you can read [build instruction](BUILD.md) on how to build the same binary package.
-This package contains a self-contained installation of ApacheDS 2.0.0-M17 with AWS IAM bridge. It is designed to be used
+This package contains a self-contained installation of ApacheDS 2.0.0-M17 with the AWS IAM bridge. It is designed to be used
 straight away on any Linux system which has Java 6 without any manual configuration. For example, it can be embedded into
 an AWS AMI and used for all your servers to allow the AWS IAM authentication of Linux users.
 
@@ -100,7 +100,7 @@ to fetch the users and groups, and authenticate with AWS IAM on their behalf.
 
 6. (Optional) Configure propagation of the access credentials into user session
 
-    There is an ability to propagate the AWS Access Key and Secret Key into the logged-in user session allowing that user to execute the AWS command (for example, with awscli)
+    There is an ability to propagate the AWS Access Key and Secret Key into the logged-in user session allowing that user to execute AWS commands (for example, with awscli)
     using their own credentials without the need to pre-configure them in the instance.
 
     In order to enable it:
@@ -125,7 +125,7 @@ Pick the `libnss-ldapd`/`libpam-ldapd` option as I found it to work the best wit
 - modify /etc/pam.d/common-session by adding this line somewhere close to the end: `session     required      pam_mkhomedir.so skel=/etc/skel umask=0022`
 
 After successful configuration of LDAP and NSLCD you should be able to see the users and groups using `getent passwd` and `getent group`
-If that works, you should now be able to login using the username of one of your IAM accounts, and using the secret key as the password.
+If that works, you should now be able to login using the username of one of your IAM accounts, and using the secret key as the password or AWS IAM account password.
 
 Config file
 ===========

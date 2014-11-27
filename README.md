@@ -9,7 +9,7 @@ an AWS AMI and used for all your servers to allow the AWS IAM authentication of 
 
 The bridge periodically populates the LDAP directory location with the users, groups and roles from AWS IAM. If you configure
 you Linux with LDAP authentication (for example, using libpam-ldapd) it will allow authentication of the Linux users against
-AWS IAM using their AWS IAM Secret Keys as passwords.
+AWS IAM using their AWS IAM Secret Keys or AWS IAM passwords.
 
 After login, the user will have the Linux groups corresponding to the IAM groups that were assigned to them.
 
