@@ -32,7 +32,7 @@ The software is now available as a pre-built AMI (based on Amazon Linux). You ca
  
 1. Select to Launch instance
 1. Pre-condition: Create an EC2 Role with the Get/List permission to AWS IAM
-2. Search for public AMI with ID ami-19533f23
+2. Search for public AMI with ID ami-19533f23 (NEW - with IAM password authentication ami-e16b02db)
 3. Select at least t2.small instance type
 4. Assign the instance the above-mentioned role
 5. Assign a security group which has port 10389 opened to the LDAP clients (that's where the LDAP server will be running)

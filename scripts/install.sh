@@ -1,9 +1,13 @@
 #!/bin/bash
 
-curl -O https://s3-ap-southeast-2.amazonaws.com/aws-iam-apacheds/apacheds-0.1.zip
+curl -O https://s3-ap-southeast-2.amazonaws.com/aws-iam-apacheds/apacheds-0.2.zip
 unzip -q apacheds-0.1.zip
 cd apacheds/instances
 unzip -q default
+
+sudo bash <<EOF
+echo "validator=iam_password\n" >> /etc/iam_ldap.conf
+EOF
 
 sudo bash <<EOF
 echo "
