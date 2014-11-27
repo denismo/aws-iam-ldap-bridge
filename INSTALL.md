@@ -35,10 +35,12 @@ The software is now available as a pre-built AMI (based on Amazon Linux). You ca
 2. Search for public AMI with ID ami-19533f23
 3. Select at least t2.small instance type
 4. Assign the instance the above-mentioned role
-5. Assign a security group which has port 10389 opened to the LDAP clients (that's where the LDAP will be running)
-> *Note:* Never run this instance in public subnet with port 10389 open to the Internet 
-> *Note:* Make sure you read the section about [security hardening](#security-notes) 
+5. Assign a security group which has port 10389 opened to the LDAP clients (that's where the LDAP server will be running)
 6. Launch the instance
+
+> *Note:* Never run this instance in public subnet with port 10389 open to the Internet
+
+> *Note:* Make sure you read the section about [security hardening](#security-notes)
 
 After a few second, verify that the LDAP works by executing the following command:
 
@@ -77,6 +79,8 @@ to fetch the users and groups, and authenticate with AWS IAM on their behalf.
 
     - pollPeriod:  frequency with which the server will refresh the credentials from IAM. Default is 600 seconds.
     - rootDN: the root DN for the authentication information. An new partition will be created at this location. Default is "dc=iam,dc=aws,dc=org".
+    - validator: the type of validator to be used. Can be either "iam_secret_key" (default), or "iam_password". iam_secret_key expects IAM Secret Access
+    Key as the password for the user, while "iam_password" expects the actual IAM account password (the same the user would use to login into AWS Console).
 
     If no config file is specified, the defaults above are used.
 
@@ -133,6 +137,8 @@ The following properties can be defined:
 - pollPeriod:  frequency with which the server will refresh the credentials from IAM. Default is 600 seconds.
 - rootDN: the root DN for the authentication information. An new partition will be created at this location, and then "ou=users" and "ou=groups". 
     Default is "dc=iam,dc=aws,dc=org".
+- validator: the type of validator to be used. Can be either "iam_secret_key" (default), or "iam_password". iam_secret_key expects IAM Secret Access
+    Key as the password for the user, while "iam_password" expects the actual IAM account password (the same the user would use to login into AWS Console).
 
 If no config file is specified, the defaults above are used.
 

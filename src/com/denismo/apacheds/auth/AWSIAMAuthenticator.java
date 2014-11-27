@@ -18,29 +18,22 @@
 
 package com.denismo.apacheds.auth;
 
-import com.denismo.aws.iam.IAMPasswordValidator;
+import com.denismo.aws.iam.IAMAccountPasswordValidator;
+import com.denismo.aws.iam.IAMSecretKeyValidator;
 import com.denismo.aws.iam.LDAPIAMPoller;
-import org.apache.directory.api.ldap.model.exception.LdapInvalidDnException;
-import org.apache.directory.api.ldap.model.name.Dn;
-import org.apache.directory.server.core.api.DirectoryService;
-import org.apache.directory.server.core.api.DnFactory;
+import com.denismo.aws.iam._IAMPasswordValidator;
 import org.apache.directory.server.core.api.LdapPrincipal;
 import org.apache.directory.server.core.api.entry.ClonedServerEntry;
-import org.apache.directory.server.core.api.event.NotificationCriteria;
 import org.apache.directory.server.core.api.interceptor.context.BindOperationContext;
 import org.apache.directory.server.core.api.interceptor.context.LookupOperationContext;
-import org.apache.directory.server.core.api.partition.Partition;
 import org.apache.directory.server.core.authn.AbstractAuthenticator;
 import org.apache.directory.server.core.authn.SimpleAuthenticator;
-import org.apache.directory.server.core.partition.impl.btree.jdbm.JdbmIndex;
-import org.apache.directory.server.core.partition.impl.btree.jdbm.JdbmPartition;
 import org.apache.directory.server.i18n.I18n;
 import org.apache.directory.api.ldap.model.constants.AuthenticationLevel;
 import org.apache.directory.api.ldap.model.constants.SchemaConstants;
 import org.apache.directory.api.ldap.model.entry.Entry;
 import org.apache.directory.api.ldap.model.exception.LdapAuthenticationException;
 import org.apache.directory.api.ldap.model.exception.LdapException;
-import org.apache.directory.server.xdbm.Index;
 import org.apache.mina.core.session.IoSession;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -49,9 +42,7 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.net.SocketAddress;
-import java.util.HashSet;
 import java.util.Properties;
-import java.util.Set;
 
 /**
  * User: Denis Mikhalkin
@@ -62,8 +53,14 @@ public class AWSIAMAuthenticator extends AbstractAuthenticator {
     private static final Logger LOG = LoggerFactory.getLogger(AWSIAMAuthenticator.class);
 
     public static class Config {
+        public static final String PASSWORD_VALIDATOR = "iam_password";
         public String rootDN = "dc=iam,dc=aws,dc=org";
         public int pollPeriod = 600;
+        public String validator = "iam_secret_key"; // other options: iam_secret_key
+
+        public boolean isSecretKeyLogin() {
+            return !PASSWORD_VALIDATOR.equals(validator);
+        }
     }
 
     private static Config s_config;
@@ -75,7 +72,7 @@ public class AWSIAMAuthenticator extends AbstractAuthenticator {
         return s_config;
     }
 
-    private final IAMPasswordValidator validator = new IAMPasswordValidator();
+    private _IAMPasswordValidator validator;
     private LDAPIAMPoller poller;
     private SimpleAuthenticator delegatedAuth;
     private boolean disabled;
@@ -119,6 +116,7 @@ public class AWSIAMAuthenticator extends AbstractAuthenticator {
                 AWSIAMAuthenticator.Config config = new AWSIAMAuthenticator.Config();
                 if (props.containsKey("pollPeriod")) config.pollPeriod = Integer.parseInt(props.getProperty("pollPeriod"));
                 if (props.containsKey("rootDN")) config.rootDN = props.getProperty("rootDN");
+                if (props.containsKey("validator")) config.validator = props.getProperty("validator");
                 AWSIAMAuthenticator.setConfig(config);
             } catch (IOException e) {
                 LOG.error("Unable to read IAM LDAP config file");
@@ -127,6 +125,15 @@ public class AWSIAMAuthenticator extends AbstractAuthenticator {
         } else {
             // Populate from defaults
             AWSIAMAuthenticator.setConfig(new AWSIAMAuthenticator.Config());
+        }
+        createValidator();
+    }
+
+    private void createValidator() {
+        if (Config.PASSWORD_VALIDATOR.equals(getConfig().validator)) {
+            validator = new IAMAccountPasswordValidator();
+        } else {
+            validator = new IAMSecretKeyValidator();
         }
     }
 

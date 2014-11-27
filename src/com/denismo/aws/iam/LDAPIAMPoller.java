@@ -19,6 +19,7 @@
 package com.denismo.aws.iam;
 
 import com.amazonaws.AmazonClientException;
+import com.amazonaws.AmazonServiceException;
 import com.amazonaws.auth.AWSCredentials;
 import com.amazonaws.auth.AWSCredentialsProvider;
 import com.amazonaws.auth.BasicAWSCredentials;
@@ -64,6 +65,9 @@ import java.util.*;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
+import java.util.regex.MatchResult;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * User: Denis Mikhalkin
@@ -490,7 +494,7 @@ public class LDAPIAMPoller {
         for (Entry user : allUsers) {
             try {
                 if (!userNames.contains(user.get(SchemaConstants.CN_AT).getString())) {
-                    LOG.debug("Deleting non-existant user " + user.get(SchemaConstants.CN_AT));
+                    LOG.debug("Deleting non-existing user " + user.get(SchemaConstants.CN_AT));
                     directory.getAdminSession().delete(user.getDn());
                 }
             } catch (LdapException e) {
@@ -511,8 +515,12 @@ public class LDAPIAMPoller {
 
     private void addUser(User user, String accessKey, Entry group) throws LdapException {
         if (accessKey == null) {
-            LOG.info("User " + user.getUserName() + " has no active access keys");
-            return;
+            if (AWSIAMAuthenticator.getConfig().isSecretKeyLogin()) {
+                LOG.info("User " + user.getUserName() + " has no active access keys");
+                return;
+            } else {
+                accessKey = "";
+            }
         }
         Entry existingUser = getExistingUser(user);
         if (existingUser != null) {
@@ -549,10 +557,20 @@ public class LDAPIAMPoller {
         ent.put("shadowMax", "999999");
         ent.put("loginshell", "/bin/bash");
         ent.put("homedirectory", "/home/" + user.getUserName());
+        ent.put("accountNumber", getAccountNumber(user.getArn()));
         add(ent);
 
         if (group != null) directory.getAdminSession().modify(group.getDn(),
                 new DefaultModification(ModificationOperation.ADD_ATTRIBUTE, "memberUid", user.getUserName()));
+    }
+
+    private static final Pattern ACCOUNT_PATTERN = Pattern.compile("arn:aws:iam::(\\d+):user/.*");
+    private String getAccountNumber(String arn) {
+        Matcher result = ACCOUNT_PATTERN.matcher(arn);
+        if (result.matches()) {
+            return result.group(1);
+        }
+        throw new RuntimeException("Unable to identify account number for " + arn);
     }
 
     private Entry getExistingUser(User user) throws LdapException {

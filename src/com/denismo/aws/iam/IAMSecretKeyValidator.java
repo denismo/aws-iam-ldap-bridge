@@ -34,8 +34,9 @@ import org.slf4j.LoggerFactory;
  * Date: 30/03/13
  * Time: 10:40 PM
  */
-public class IAMPasswordValidator {
-    private static final Logger LOG = LoggerFactory.getLogger(IAMPasswordValidator.class);
+public class IAMSecretKeyValidator implements _IAMPasswordValidator {
+    private static final Logger LOG = LoggerFactory.getLogger(IAMSecretKeyValidator.class);
+    @Override
     public boolean verifyIAMPassword(Entry user, String pw) throws LdapInvalidAttributeValueException, LdapAuthenticationException {
         boolean role = false;
         AWSCredentials creds;
