@@ -86,7 +86,7 @@ ADS_CONTROLS="-Dapacheds.controls=org.apache.directory.api.ldap.codec.controls.c
 ADS_EXTENDED_OPERATIONS="-Dapacheds.extendedOperations=org.apache.directory.api.ldap.extras.extended.ads_impl.cancel.CancelFactory,org.apache.directory.api.ldap.extras.extended.ads_impl.certGeneration.CertGenerationFactory,org.apache.directory.api.ldap.extras.extended.ads_impl.gracefulShutdown.GracefulShutdownFactory,org.apache.directory.api.ldap.extras.extended.ads_impl.storedProcedure.StoredProcedureFactory,org.apache.directory.api.ldap.extras.extended.ads_impl.gracefulDisconnect.GracefulDisconnectFactory"
 
 if [ "$ADS_ACTION" = "start" ]; then
-    # Printing instance information
+    # Printing instance informatio
     echo "Starting ApacheDS instance '$ADS_INSTANCE_NAME'..."
 
     if [ -f "$ADS_PID" ]; then
