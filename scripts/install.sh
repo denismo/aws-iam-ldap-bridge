@@ -1,12 +1,10 @@
 #!/bin/bash
 
-curl -O https://s3-ap-southeast-2.amazonaws.com/aws-iam-apacheds/apacheds-0.2.zip
-unzip -q apacheds-0.1.zip
-cd apacheds/instances
-unzip -q default
+curl -O https://s3-ap-southeast-2.amazonaws.com/aws-iam-apacheds/apacheds-0.2.1.zip || exit 1
+unzip -q apacheds-0.2.1.zip || exit 1
 
 sudo bash <<EOF
-echo "validator=iam_password\n" >> /etc/iam_ldap.conf
+echo -e "validator=iam_password\n" >> /etc/iam_ldap.conf
 EOF
 
 sudo bash <<EOF

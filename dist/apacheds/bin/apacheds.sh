@@ -60,7 +60,7 @@ if $cygwin; then
 fi
 
 # Check if there is instance archive
-if [ -f "$ADS_HOME/instances/$ADS_INSTANCE_NAME.zip" ]; then
+if ! [ -d "$ADS_HOME/instances/$ADS_INSTANCE_NAME" ] && [ -f "$ADS_HOME/instances/$ADS_INSTANCE_NAME.zip" ]; then
     unzip -d "$ADS_HOME/instances" -q "$ADS_HOME/instances/$ADS_INSTANCE_NAME.zip"
 fi
 
