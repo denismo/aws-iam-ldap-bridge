@@ -471,6 +471,7 @@ public class LDAPIAMPoller {
                             continue;
                         }
                         addUser(user, getUserAccessKey(client, user), groupEntry);
+                        updateGroups(groups, user);
                         allUsers.add(user.getUserName());
                         LOG.info("Added user " + user.getUserName());
                     } catch (Throwable e) {
@@ -490,15 +491,35 @@ public class LDAPIAMPoller {
     }
 
     private void removeDeletedUsers(Set<String> userNames) {
+        Set<String> toBeDeleted = new HashSet<String>();
         Collection<Entry> allUsers = getAllEntries(usersDN, "iamaccount");
         for (Entry user : allUsers) {
             try {
-                if (!userNames.contains(user.get(SchemaConstants.CN_AT).getString())) {
+                String userName = user.get(SchemaConstants.CN_AT).getString();
+                if (!userNames.contains(userName)) {
+                    toBeDeleted.add(userName);
                     LOG.debug("Deleting non-existing user " + user.get(SchemaConstants.CN_AT));
                     directory.getAdminSession().delete(user.getDn());
                 }
             } catch (LdapException e) {
                 LOG.error("Unable to delete user " + user.getDn());
+            }
+        }
+        Collection<Entry> allGroups = getAllEntries(groupsDN, "iamgroup");
+        for (Entry group : allGroups) {
+            try {
+                List<Modification> deletions = new ArrayList<Modification>();
+                for (String userUid: toBeDeleted) {
+                    if (group.contains("memberUid", userUid)) {
+                        deletions.add(new DefaultModification(ModificationOperation.REMOVE_ATTRIBUTE, "memberUid", userUid));
+                    }
+                }
+                if (!deletions.isEmpty()) {
+                    LOG.info("Deleting " + deletions + " from " + group.getDn());
+                    directory.getAdminSession().modify(group.getDn(), deletions);
+                }
+            } catch (LdapException e) {
+                LOG.error("Unable to delete users from group " + group.getDn());
             }
         }
     }
@@ -528,10 +549,6 @@ public class LDAPIAMPoller {
                     new DefaultModification(ModificationOperation.REPLACE_ATTRIBUTE, "accessKey", accessKey),
                     new DefaultModification(ModificationOperation.REPLACE_ATTRIBUTE, "gidNumber", group.get("gidNumber").getString())
             );
-            if (!group.contains("memberUid", user.getUserName())) {
-                directory.getAdminSession().modify(group.getDn(),
-                        new DefaultModification(ModificationOperation.ADD_ATTRIBUTE, "memberUid", user.getUserName()));
-            }
             return;
         }
 
@@ -559,9 +576,37 @@ public class LDAPIAMPoller {
         ent.put("homedirectory", "/home/" + user.getUserName());
         ent.put("accountNumber", getAccountNumber(user.getArn()));
         add(ent);
+    }
 
-        if (group != null) directory.getAdminSession().modify(group.getDn(),
-                new DefaultModification(ModificationOperation.ADD_ATTRIBUTE, "memberUid", user.getUserName()));
+    private void updateGroups(Collection<Group> groups, User user) {
+        Set<String> groupNames = new HashSet<String>();
+        for (Group group : groups) {
+            groupNames.add(group.getGroupName());
+        }
+        Collection<Entry> allGroups = getAllEntries(groupsDN, "iamgroup");
+        String userUid = user.getUserName();
+        LOG.info("Updating groups for " + userUid);
+        for (Entry group : allGroups) {
+            LOG.info("Looking at group " + group.getDn());
+            try {
+                List<Modification> modifications = new ArrayList<Modification>();
+                if (groupNames.contains(group.get(SchemaConstants.CN_AT).getString())) {
+                    if (!group.contains("memberUid", userUid)) {
+                        modifications.add(new DefaultModification(ModificationOperation.ADD_ATTRIBUTE, "memberUid", userUid));
+                    }
+                } else {
+                    if (group.contains("memberUid", userUid)) {
+                        modifications.add(new DefaultModification(ModificationOperation.REMOVE_ATTRIBUTE, "memberUid", userUid));
+                    }
+                }
+                if (!modifications.isEmpty()) {
+                    LOG.info("Will modify group with " + modifications);
+                    directory.getAdminSession().modify(group.getDn(), modifications);
+                }
+            } catch (LdapException e) {
+                LOG.error("Unable to update users in group " + group.getDn());
+            }
+        }
     }
 
     private static final Pattern ACCOUNT_PATTERN = Pattern.compile("arn:aws:iam::(\\d+):user/.*");
