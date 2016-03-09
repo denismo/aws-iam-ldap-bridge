@@ -1,0 +1,6 @@
+# ignore these
+apacheds_awsiam.jar
+ivylib/
+ivyout/
+target/
+
