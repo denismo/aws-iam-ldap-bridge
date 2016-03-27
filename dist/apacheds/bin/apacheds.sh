@@ -17,6 +17,7 @@
 #  specific language governing permissions and limitations
 #  under the License.
 #
+set -x
 
 # Detect ads home (http://stackoverflow.com/a/630387/516433)
 ADS_HOME="`dirname \"$0\"`"
@@ -85,8 +86,8 @@ ADS_CONTROLS="-Dapacheds.controls=org.apache.directory.api.ldap.codec.controls.c
 
 ADS_EXTENDED_OPERATIONS="-Dapacheds.extendedOperations=org.apache.directory.api.ldap.extras.extended.ads_impl.cancel.CancelFactory,org.apache.directory.api.ldap.extras.extended.ads_impl.certGeneration.CertGenerationFactory,org.apache.directory.api.ldap.extras.extended.ads_impl.gracefulShutdown.GracefulShutdownFactory,org.apache.directory.api.ldap.extras.extended.ads_impl.storedProcedure.StoredProcedureFactory,org.apache.directory.api.ldap.extras.extended.ads_impl.gracefulDisconnect.GracefulDisconnectFactory"
 
-if [ "$ADS_ACTION" = "start" ]; then
-    # Printing instance informatio
+if [ "$ADS_ACTION" = "start" ] || [ "$ADS_ACTION" = "console" ]; then
+    # Printing instance information
     echo "Starting ApacheDS instance '$ADS_INSTANCE_NAME'..."
 
     if [ -f "$ADS_PID" ]; then
@@ -97,6 +98,11 @@ if [ "$ADS_ACTION" = "start" ]; then
             exit 1;
         fi
     fi
+    if [ "$ADS_ACTION" = "start" ]; then
+        DAEMONIZE="> '$ADS_OUT' 2>&1 &"
+    else
+        DAEMONIZE=""
+    fi
 
     # Launching ApacheDS
     eval "\"$RUN_JAVA\"" $JAVA_OPTS $ADS_CONTROLS $ADS_EXTENDED_OPERATIONS \
@@ -104,7 +110,7 @@ if [ "$ADS_ACTION" = "start" ]; then
         -Dapacheds.log.dir="\"$ADS_HOME/instances/$ADS_INSTANCE_NAME/log\"" \
         -classpath "\"$CLASSPATH\"" \
         org.apache.directory.server.UberjarMain "\"$ADS_HOME/instances/$ADS_INSTANCE_NAME\"" \
-        > "$ADS_OUT" 2>&1 "&"
+        "$DAEMONIZE"
     echo $! > "$ADS_PID"
 elif [ "$ADS_ACTION" = "stop" ]; then
     # Printing instance information
