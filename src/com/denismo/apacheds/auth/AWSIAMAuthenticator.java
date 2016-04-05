@@ -18,10 +18,7 @@
 
 package com.denismo.apacheds.auth;
 
-import com.denismo.aws.iam.IAMAccountPasswordValidator;
-import com.denismo.aws.iam.IAMSecretKeyValidator;
-import com.denismo.aws.iam.LDAPIAMPoller;
-import com.denismo.aws.iam._IAMPasswordValidator;
+import com.denismo.aws.iam.*;
 import org.apache.directory.server.core.api.LdapPrincipal;
 import org.apache.directory.server.core.api.entry.ClonedServerEntry;
 import org.apache.directory.server.core.api.interceptor.context.BindOperationContext;
@@ -54,13 +51,14 @@ public class AWSIAMAuthenticator extends AbstractAuthenticator {
 
     public static class Config {
         public static final String PASSWORD_VALIDATOR = "iam_password";
+        public static final String SECRET_KEY_VALIDATOR = "iam_secret_key";
         public String rootDN = "dc=iam,dc=aws,dc=org";
         public int pollPeriod = 600;
-        public String validator = "iam_secret_key"; // other options: iam_secret_key
+        public String validator = "iam_dual";
 
-        public boolean isSecretKeyLogin() {
-            return !PASSWORD_VALIDATOR.equals(validator);
-        }
+        public boolean isPasswordLogin() { return PASSWORD_VALIDATOR.equals(validator); }
+        public boolean isSecretKeyLogin() { return SECRET_KEY_VALIDATOR.equals(validator); }
+        public boolean isDualLogin() { return !this.isPasswordLogin() && !this.isSecretKeyLogin(); }
     }
 
     private static Config s_config;
@@ -130,10 +128,14 @@ public class AWSIAMAuthenticator extends AbstractAuthenticator {
     }
 
     private void createValidator() {
-        if (Config.PASSWORD_VALIDATOR.equals(getConfig().validator)) {
+        Config config = getConfig();
+        if (config.isPasswordLogin()) {
             validator = new IAMAccountPasswordValidator();
-        } else {
+        } else if (config.isSecretKeyLogin()) {
             validator = new IAMSecretKeyValidator();
+        } else {
+            assert config.isDualLogin();
+            validator = new IAMDualValidator();
         }
     }
 
