@@ -19,10 +19,7 @@
 package com.denismo.aws.iam;
 
 import com.amazonaws.AmazonClientException;
-import com.amazonaws.AmazonServiceException;
-import com.amazonaws.auth.AWSCredentials;
 import com.amazonaws.auth.AWSCredentialsProvider;
-import com.amazonaws.auth.BasicAWSCredentials;
 import com.amazonaws.auth.DefaultAWSCredentialsProviderChain;
 import com.amazonaws.services.identitymanagement.AmazonIdentityManagementClient;
 import com.amazonaws.services.identitymanagement.model.*;
@@ -32,7 +29,7 @@ import com.denismo.apacheds.auth.AWSIAMAuthenticator;
 import org.apache.directory.api.ldap.model.constants.SchemaConstants;
 import org.apache.directory.api.ldap.model.cursor.CursorException;
 import org.apache.directory.api.ldap.model.entry.*;
-import org.apache.directory.api.ldap.model.exception.LdapInvalidAttributeValueException;
+import org.apache.directory.api.ldap.model.exception.LdapException;
 import org.apache.directory.api.ldap.model.exception.LdapNoSuchObjectException;
 import org.apache.directory.api.ldap.model.filter.ExprNode;
 import org.apache.directory.api.ldap.model.filter.FilterParser;
@@ -41,31 +38,21 @@ import org.apache.directory.api.ldap.model.name.Dn;
 import org.apache.directory.api.ldap.model.name.Rdn;
 import org.apache.directory.api.ldap.model.schema.normalizers.ConcreteNameComponentNormalizer;
 import org.apache.directory.api.ldap.model.schema.normalizers.NameComponentNormalizer;
-import org.apache.directory.server.constants.ApacheSchemaConstants;
 import org.apache.directory.server.core.api.DirectoryService;
-import org.apache.directory.api.ldap.model.exception.LdapException;
-import org.apache.directory.server.core.api.DnFactory;
 import org.apache.directory.server.core.api.filtering.EntryFilteringCursor;
-import org.apache.directory.server.core.api.interceptor.context.*;
+import org.apache.directory.server.core.api.interceptor.context.HasEntryOperationContext;
+import org.apache.directory.server.core.api.interceptor.context.LookupOperationContext;
+import org.apache.directory.server.core.api.interceptor.context.SearchOperationContext;
 import org.apache.directory.server.core.api.normalization.FilterNormalizingVisitor;
-import org.apache.directory.server.core.api.partition.Partition;
-import org.apache.directory.server.core.partition.impl.btree.AbstractBTreePartition;
-import org.apache.directory.server.core.partition.impl.btree.jdbm.JdbmIndex;
-import org.apache.directory.server.core.partition.impl.btree.jdbm.JdbmPartition;
-import org.apache.directory.server.xdbm.Index;
-import org.apache.directory.server.xdbm.ParentIdAndRdn;
-import org.apache.directory.server.xdbm.Store;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.File;
 import java.io.IOException;
 import java.text.ParseException;
 import java.util.*;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
-import java.util.regex.MatchResult;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -553,7 +540,7 @@ public class LDAPIAMPoller {
         }
 
         DefaultEntry ent = new DefaultEntry(directory.getSchemaManager(), directory.getDnFactory().create(String.format(USER_FMT, user.getUserName())));
-        ent.put(SchemaConstants.OBJECT_CLASS_AT, "posixAccount", "shadowAccount", "iamaccount");
+        ent.put(SchemaConstants.OBJECT_CLASS_AT, "posixAccount", "shadowAccount", "iamaccount", "extensibleObject");
         ent.put("accessKey", accessKey);
         ent.put("uid", user.getUserName());
         ent.put(SchemaConstants.ENTRY_CSN_AT, directory.getCSN().toString());

@@ -1,0 +1,9 @@
+# ignore these
+.idea/
+*.iml
+apacheds_awsiam.jar
+ivylib/
+ivyout/
+target/
+out/
+

@@ -29,7 +29,7 @@
              uri="antlib:org.apache.ivy.ant" classpathref="ivy.lib.path"/>
     <ivy:settings file="${basedir}/ivysettings.xml" />
     <ivy:retrieve  />
-    <target name="compile">
+    <target name="compile" depends="clean">
          <delete dir="${outdir}" failonerror="false" />
          <mkdir dir="${outdir}" />
          <javac srcdir="${basedir}/src" destdir="${basedir}/ivyout" debug="true" debuglevel="lines,vars,source">
@@ -71,6 +71,12 @@
 
         <delete file="${basedir}/target/apacheds.zip" failonerror="false" />
         <zip file="${basedir}/target/apacheds.zip" basedir="${basedir}/target"/>
+        <unzip src="${targetdir}/instances/default.zip" dest="${targetdir}/instances/"/>
+    </target>
+
+    <target name="clean">
+        <delete dir="${outdir}" failonerror="false"/>
+        <delete dir="${targetdir}" failonerror="false"/>
     </target>
 
 </project>
