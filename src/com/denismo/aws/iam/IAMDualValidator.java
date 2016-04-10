@@ -17,7 +17,7 @@ public class IAMDualValidator implements _IAMPasswordValidator {
     private List<_IAMPasswordValidator> validators;
 
     public IAMDualValidator() {
-        this.validators = new LinkedList<>();
+        this.validators = new LinkedList<_IAMPasswordValidator>();
         this.validators.add(new IAMAccountPasswordValidator());
         this.validators.add(new IAMSecretKeyValidator());
     }

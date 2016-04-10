@@ -52,13 +52,14 @@ public class AWSIAMAuthenticator extends AbstractAuthenticator {
     public static class Config {
         public static final String PASSWORD_VALIDATOR = "iam_password";
         public static final String SECRET_KEY_VALIDATOR = "iam_secret_key";
+        public static final String DUAL_VALIDATOR = "iam_dual";
         public String rootDN = "dc=iam,dc=aws,dc=org";
         public int pollPeriod = 600;
-        public String validator = "iam_dual";
+        public String validator = "iam_secret_key";
 
         public boolean isPasswordLogin() { return PASSWORD_VALIDATOR.equals(validator); }
         public boolean isSecretKeyLogin() { return SECRET_KEY_VALIDATOR.equals(validator); }
-        public boolean isDualLogin() { return !this.isPasswordLogin() && !this.isSecretKeyLogin(); }
+        public boolean isDualLogin() { return DUAL_VALIDATOR.equals(validator); }
     }
 
     private static Config s_config;
@@ -103,7 +104,7 @@ public class AWSIAMAuthenticator extends AbstractAuthenticator {
     }
 
 
-    private void readIAMProperties() {
+    private void readIAMProperties() throws LdapException {
         String propsPath = System.getProperty("iamLdapPropertiesPath", "/etc/iam_ldap.conf");
         File propsFile = new File(propsPath);
         // Read the config file if exists
@@ -127,15 +128,16 @@ public class AWSIAMAuthenticator extends AbstractAuthenticator {
         createValidator();
     }
 
-    private void createValidator() {
+    private void createValidator() throws LdapException {
         Config config = getConfig();
         if (config.isPasswordLogin()) {
             validator = new IAMAccountPasswordValidator();
         } else if (config.isSecretKeyLogin()) {
             validator = new IAMSecretKeyValidator();
-        } else {
-            assert config.isDualLogin();
+        } else if (config.isDualLogin()) {
             validator = new IAMDualValidator();
+        } else {
+            throw new LdapException("Unsupported validator mode: " + config.validator);
         }
     }
 

@@ -79,8 +79,10 @@ to fetch the users and groups, and authenticate with AWS IAM on their behalf.
 
     - pollPeriod:  frequency with which the server will refresh the credentials from IAM. Default is 600 seconds.
     - rootDN: the root DN for the authentication information. An new partition will be created at this location. Default is "dc=iam,dc=aws,dc=org".
-    - validator: the type of validator to be used. Can be either "iam_secret_key" (default), or "iam_password". iam_secret_key expects IAM Secret Access
-    Key as the password for the user, while "iam_password" expects the actual IAM account password (the same the user would use to login into AWS Console).
+    - validator: the type of validator to be used. Can be either "iam_secret_key" (default), or "iam_password", or "iam_dual" (both).
+    `iam_secret_key` expects IAM Secret Access Key as the password for the user,
+    while `iam_password` expects the actual IAM account password (the same the user would use to login into AWS Console).
+    `iam_dual` will try password first, and then try secret key.
 
     If no config file is specified, the defaults above are used.
 
