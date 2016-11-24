@@ -29,7 +29,7 @@
              uri="antlib:org.apache.ivy.ant" classpathref="ivy.lib.path"/>
     <ivy:settings file="${basedir}/ivysettings.xml" />
     <ivy:retrieve  />
-    <target name="compile" depends="clean">
+    <target name="compile">
          <delete dir="${outdir}" failonerror="false" />
          <mkdir dir="${outdir}" />
          <javac srcdir="${basedir}/src" destdir="${basedir}/ivyout" debug="true" debuglevel="lines,vars,source">
@@ -49,7 +49,7 @@
         <copy todir="${targetdir}/lib" file="${basedir}/apacheds_awsiam.jar" />
     </target>
 
-    <target name="dist" depends="package">
+    <target name="dist" depends="clean,package">
         <delete dir="${targetdir}"/>
         <mkdir dir="${targetdir}" />
 

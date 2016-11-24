@@ -65,6 +65,7 @@ public class LDAPIAMPoller {
     private static final Logger LOG = LoggerFactory.getLogger(LDAPIAMPoller.class);
     private static final Object ID_LOCK = new Object();
     public static final String ID_GENERATOR = "ads-dsSyncPeriodMillis";
+    public static final String MEMBER_OF = "memberOf";
 
     private AWSCredentialsProvider credentials;
     private DirectoryService directory;
@@ -180,7 +181,7 @@ public class LDAPIAMPoller {
         }
         cursor.close();
 
-        LOG.info("Deleting " + dns.size() + " items from under " + dnStr);
+        LOG.debug("Deleting " + dns.size() + " items from under " + dnStr);
         for (Dn deleteDn: dns) {
             directory.getAdminSession().delete(deleteDn);
         }
@@ -200,14 +201,14 @@ public class LDAPIAMPoller {
     private void pollIAM() {
         if (!directory.isStarted()) return;
 
-        LOG.info("*** Updating accounts from IAM");
+        LOG.debug("*** Updating accounts from IAM");
         try {
             createStructure();
             populateGroupsFromIAM();
             populateUsersFromIAM();
 
 //            populateRolesFromIAM();
-            LOG.info("*** IAM account update finished");
+            LOG.debug("*** IAM account update finished");
         } catch (Throwable e) {
             LOG.error("Exception polling", e);
         }
@@ -232,7 +233,7 @@ public class LDAPIAMPoller {
                     try {
                         Entry groupEntry = getOrCreateRoleGroup(role);
                         addRole(role, groupEntry);
-                        LOG.info("Added role " + role.getRoleName() + " at " + rolesDN);
+                        LOG.debug("Added role " + role.getRoleName() + " at " + rolesDN);
                     } catch (Throwable e) {
                         LOG.error("Exception processing role " + role.getRoleName(), e);
                     }
@@ -317,7 +318,7 @@ public class LDAPIAMPoller {
                     try {
                         addGroup(group);
                         groupNames.add(group.getGroupName());
-                        LOG.info("Added group " + group.getGroupName() + " at " + groupsDN);
+                        LOG.debug("Added group " + group.getGroupName() + " at " + groupsDN);
                     } catch (Throwable e) {
                         LOG.error("Exception processing group " + group.getGroupName(), e);
                     }
@@ -374,16 +375,16 @@ public class LDAPIAMPoller {
     }
 
     private Entry addGroup(Group iamGroup) throws Exception {
-        LOG.info("Adding group " + iamGroup.getGroupName());
+        LOG.debug("Adding group " + iamGroup.getGroupName());
         Entry existingGroup = getExistingGroup(iamGroup);
         if (existingGroup != null) {
-            LOG.info("Group exists: " + iamGroup.getGroupName());
+            LOG.debug("Group exists: " + iamGroup.getGroupName());
             return existingGroup;
         }
 
         String gid = allocateGroupID(iamGroup.getArn());
         Dn groupDn = directory.getDnFactory().create(String.format(GROUP_FMT, iamGroup.getGroupName()));
-        LOG.info("New group dn: " + groupDn);
+        LOG.debug("New group dn: " + groupDn);
         Entry group = new DefaultEntry(directory.getSchemaManager(), groupDn);
         group.put(SchemaConstants.OBJECT_CLASS_AT, "posixGroup", "iamgroup", "top");
         group.put("gidNumber", gid);
@@ -457,10 +458,10 @@ public class LDAPIAMPoller {
                             LOG.warn("Unable to retrieve matching group entry for group " + primaryGroup.getGroupName() + " user " + user.getUserName());
                             continue;
                         }
-                        addUser(user, getUserAccessKey(client, user), groupEntry);
+                        addUser(user, getUserAccessKey(client, user), groupEntry, groups);
                         updateGroups(groups, user);
                         allUsers.add(user.getUserName());
-                        LOG.info("Added user " + user.getUserName());
+                        LOG.debug("Added user " + user.getUserName());
                     } catch (Throwable e) {
                         LOG.error("Exception processing user " + user.getUserName(), e);
                     }
@@ -502,7 +503,7 @@ public class LDAPIAMPoller {
                     }
                 }
                 if (!deletions.isEmpty()) {
-                    LOG.info("Deleting " + deletions + " from " + group.getDn());
+                    LOG.debug("Deleting " + deletions + " from " + group.getDn());
                     directory.getAdminSession().modify(group.getDn(), deletions);
                 }
             } catch (LdapException e) {
@@ -521,10 +522,10 @@ public class LDAPIAMPoller {
         return null;
     }
 
-    private void addUser(User user, String accessKey, Entry group) throws LdapException {
+    private void addUser(User user, String accessKey, Entry group, Collection<Group> otherGroups) throws LdapException {
         if (accessKey == null) {
             if (AWSIAMAuthenticator.getConfig().isSecretKeyLogin()) {
-                LOG.info("User " + user.getUserName() + " has no active access keys");
+                LOG.debug("User " + user.getUserName() + " has no active access keys");
                 return;
             } else {
                 accessKey = "";
@@ -536,6 +537,8 @@ public class LDAPIAMPoller {
                     new DefaultModification(ModificationOperation.REPLACE_ATTRIBUTE, "accessKey", accessKey),
                     new DefaultModification(ModificationOperation.REPLACE_ATTRIBUTE, "gidNumber", group.get("gidNumber").getString())
             );
+            // TODO If gidNumber changed for user, shouldn't groups memberUid list be updated?
+            updateUserMemberOf(existingUser, otherGroups);
             return;
         }
 
@@ -562,8 +565,69 @@ public class LDAPIAMPoller {
         ent.put("loginshell", "/bin/bash");
         ent.put("homedirectory", "/home/" + user.getUserName());
         ent.put("accountNumber", getAccountNumber(user.getArn()));
+
+        setMemberOf(ent, otherGroups);
+
         add(ent);
     }
+
+    private void updateUserMemberOf(Entry existingUser, Collection<Group> otherGroups) {
+        LOG.debug("Updating memberOf of " + existingUser.getDn());
+        try {
+            Set<String> existingGroups = new HashSet<String>();
+            Attribute memberOf = existingUser.get(MEMBER_OF);
+            if (memberOf != null) {
+                for (Value value : memberOf) {
+                    existingGroups.add(value.getString());
+                }
+            }
+            LOG.debug("Existing memberOf groups; " + existingGroups);
+            List<Modification> modifications = new ArrayList<Modification>();
+            for (Group group : otherGroups) {
+                try {
+                    // Skip if it is already present
+                    Entry ldapGroup = getExistingGroup(group);
+                    // Add new
+                    if (ldapGroup != null) {
+                        if (existingGroups.remove(ldapGroup.getDn().toString())) {
+                            continue;
+                        }
+                        modifications.add(new DefaultModification(ModificationOperation.ADD_ATTRIBUTE, MEMBER_OF,
+                                ldapGroup.getDn().toString()));
+                    }
+                } catch (Exception e) {
+                    LOG.error("Unable to update groups for user " + existingUser.getDn() + " while looking at " + group, e);
+                }
+            }
+            // All remaining group names in existingGroups are absent in IAM so they need to be deleted
+            for (String group : existingGroups) {
+                modifications.add(new DefaultModification(ModificationOperation.REMOVE_ATTRIBUTE, MEMBER_OF, group));
+            }
+            LOG.debug("Executing modifications: " + modifications);
+            directory.getAdminSession().modify(existingUser.getDn(), modifications);
+        } catch (LdapException e) {
+            LOG.error("Unable to modify memberOf for user " + existingUser.getDn(), e);
+        }
+    }
+
+    private void setMemberOf(DefaultEntry userEntry, Collection<Group> otherGroups) {
+        for (Group group : otherGroups) {
+            try {
+                Entry ldapGroup = getExistingGroup(group);
+                if (ldapGroup != null) {
+                    userEntry.add(MEMBER_OF, ldapGroup.getDn().toString());
+                }
+            } catch (Exception e) {
+                LOG.error("Unable to update groups for user " + userEntry.getDn(), e);
+            }
+        }
+    }
+
+    /**
+     * Updates the list of users in each specified group, to include the new user.
+     * @param groups the list of groups to update
+     * @param user the discovered user
+     */
 
     private void updateGroups(Collection<Group> groups, User user) {
         Set<String> groupNames = new HashSet<String>();
@@ -572,9 +636,9 @@ public class LDAPIAMPoller {
         }
         Collection<Entry> allGroups = getAllEntries(groupsDN, "iamgroup");
         String userUid = user.getUserName();
-        LOG.info("Updating groups for " + userUid);
+        LOG.debug("Updating groups for " + userUid);
         for (Entry group : allGroups) {
-            LOG.info("Looking at group " + group.getDn());
+            LOG.debug("Looking at group " + group.getDn());
             try {
                 List<Modification> modifications = new ArrayList<Modification>();
                 if (groupNames.contains(group.get(SchemaConstants.CN_AT).getString())) {
@@ -587,11 +651,11 @@ public class LDAPIAMPoller {
                     }
                 }
                 if (!modifications.isEmpty()) {
-                    LOG.info("Will modify group with " + modifications);
+                    LOG.debug("Will modify group with " + modifications);
                     directory.getAdminSession().modify(group.getDn(), modifications);
                 }
             } catch (LdapException e) {
-                LOG.error("Unable to update users in group " + group.getDn());
+                LOG.error("Unable to update users in group " + group.getDn(), e);
             }
         }
     }

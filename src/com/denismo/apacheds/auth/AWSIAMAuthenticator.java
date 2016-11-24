@@ -85,7 +85,7 @@ public class AWSIAMAuthenticator extends AbstractAuthenticator {
     @Override
     protected void doInit() {
         super.doInit();
-        LOG.info("Init called");
+        LOG.debug("Init called");
         if (getDirectoryService() != null) {
             try {
                 delegatedAuth.init(getDirectoryService());
@@ -99,7 +99,7 @@ public class AWSIAMAuthenticator extends AbstractAuthenticator {
                 disabled=true;
             }
         } else {
-            LOG.info("doInit without directory service");
+            LOG.debug("doInit without directory service");
         }
     }
 
@@ -144,7 +144,7 @@ public class AWSIAMAuthenticator extends AbstractAuthenticator {
     @Override
     public LdapPrincipal authenticate(BindOperationContext bindContext) throws Exception {
         if (!isAWSAccount(bindContext) || disabled) {
-            LOG.info("Skipping " + bindContext.getDn() + " - not an AWS account");
+            LOG.debug("Skipping " + bindContext.getDn() + " - not an AWS account");
             if (delegatedAuth == null) {
                 LOG.error("Delegated auth is null");
                 return null;
@@ -152,7 +152,7 @@ public class AWSIAMAuthenticator extends AbstractAuthenticator {
             return delegatedAuth.authenticate(bindContext);
         }
 
-        LOG.info("Authenticating " + bindContext.getDn());
+        LOG.debug("Authenticating " + bindContext.getDn());
 
         byte[] password = bindContext.getCredentials();
 
