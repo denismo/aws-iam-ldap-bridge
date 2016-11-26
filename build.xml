@@ -52,6 +52,7 @@
     <target name="dist" depends="clean,package">
         <delete dir="${targetdir}"/>
         <mkdir dir="${targetdir}" />
+        <loadproperties srcfile="version"/>
 
         <copy file="${basedir}/INSTALL.md" todir="${targetdir}"/>
         <copy todir="${targetdir}">
@@ -69,8 +70,8 @@
 
         <copy todir="${targetdir}/lib" file="${basedir}/apacheds_awsiam.jar" />
 
-        <delete file="${basedir}/target/apacheds.zip" failonerror="false" />
-        <zip file="${basedir}/target/apacheds.zip" basedir="${basedir}/target"/>
+        <delete file="${basedir}/target/apacheds*.zip" failonerror="false" />
+        <zip file="${basedir}/target/apacheds-${release}.zip" basedir="${basedir}/target"/>
         <unzip src="${targetdir}/instances/default.zip" dest="${targetdir}/instances/"/>
     </target>
 
