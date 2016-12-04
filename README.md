@@ -17,3 +17,7 @@ Note: The user's AWS Secret Keys are never stored in any persistent storage or l
 
 For more information, please read the [INSTALL](INSTALL.md) document inside of the installation package.
 
+
+What's New
+----------
+0.2.3 - #25 Added memberOf attribute to the users allowing fast lookup of groups
