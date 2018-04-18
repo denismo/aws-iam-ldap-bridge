@@ -71,7 +71,8 @@
         <copy todir="${targetdir}/lib" file="${basedir}/apacheds_awsiam.jar" />
 
         <delete file="${basedir}/target/apacheds*.zip" failonerror="false" />
-        <zip file="${basedir}/target/apacheds-${release}.zip" basedir="${basedir}/target"/>
+        <zip file="${basedir}/target/apacheds-${release}.zip" basedir="${basedir}/target"
+             excludes="apacheds-${release}.zip"/>
         <unzip src="${targetdir}/instances/default.zip" dest="${targetdir}/instances/"/>
     </target>
 

@@ -44,6 +44,7 @@ import org.apache.directory.server.core.api.interceptor.context.HasEntryOperatio
 import org.apache.directory.server.core.api.interceptor.context.LookupOperationContext;
 import org.apache.directory.server.core.api.interceptor.context.SearchOperationContext;
 import org.apache.directory.server.core.api.normalization.FilterNormalizingVisitor;
+import org.apache.commons.lang.text.StrTokenizer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -55,6 +56,7 @@ import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.lang.ProcessBuilder;
 
 /**
  * User: Denis Mikhalkin
@@ -82,6 +84,7 @@ public class LDAPIAMPoller {
     private ScheduledFuture<?> schedule;
     private ApacheDSUtils utils;
     private Runner runner;
+    private String externalPollerCommand;
 
     public LDAPIAMPoller(DirectoryService directoryService) throws LdapException {
         this.directory = directoryService;
@@ -132,6 +135,8 @@ public class LDAPIAMPoller {
             AWSIAMAuthenticator.Config config = AWSIAMAuthenticator.getConfig();
             rootDN = config.rootDN;
             pollPeriod = config.pollPeriod;
+
+            externalPollerCommand = config.externalPollerCommand;
 
             groupsDN = "ou=groups," + rootDN;
             usersDN = "ou=users," + rootDN;
@@ -198,6 +203,14 @@ public class LDAPIAMPoller {
         add(entry);
     }
 
+    private int runExternalPoller() throws IOException, InterruptedException {
+        LOG.info("Running external poller command: " + externalPollerCommand);
+        Process p = new ProcessBuilder("/bin/bash", "-c", this.externalPollerCommand).start();
+        int returnCode = p.waitFor();
+        LOG.info(String.format("External Poller complete: retcode=%d", returnCode));
+        return returnCode;
+    }
+
     private void pollIAM() {
         if (!directory.isStarted()) return;
 
@@ -209,6 +222,13 @@ public class LDAPIAMPoller {
 
 //            populateRolesFromIAM();
             LOG.debug("*** IAM account update finished");
+
+            // add external poller here
+            if (this.externalPollerCommand != null) {
+                runExternalPoller();
+            }
+
+
         } catch (Throwable e) {
             LOG.error("Exception polling", e);
         }
